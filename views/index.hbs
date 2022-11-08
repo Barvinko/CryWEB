@@ -1,0 +1,38 @@
+<form action="signUp" method="POST">
+    <div class="form-floating mb-3">
+    <input type="text" class="form-control" name="login" placeholder="Login">
+    <label for="floatingInput">Login</label>
+    </div>
+    <div class="form-floating">
+    <input type="password" class="form-control" name="password" placeholder="Password">
+    <label for="floatingPassword">Password</label>
+    </div>
+    <button class="btn btn-primary mt-3" type="submit">SIGN UP</button>
+</form>
+
+{{#if todos.length}}
+<ul>
+    {{!-- вывод масива через each --}}
+    {{#each todos}}
+        <li class="todo">
+            <form action="/complete" method="POST">
+                <label for="">
+                    {{#if completed}}
+                        <input type="checkbox" checked name="completed">
+                        <span class="complete">{{title}}</span>
+                    {{else}}
+                        <input type="checkbox" name="completed">
+                        <span>{{title}}</span>
+                    {{/if}}
+
+                    <input type="hidden" value="{{_id}}" name="id">
+                    
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </label>
+            </form>
+        </li>
+    {{/each}}
+</ul>
+{{else}}
+<p>No todos</p>
+{{/if}}
