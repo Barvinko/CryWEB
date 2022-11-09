@@ -12,7 +12,7 @@ const schema = new Schema({
         require: true
     },
     messages: {
-        type: Object,
+        type: Array,
         require: true
     }
 })

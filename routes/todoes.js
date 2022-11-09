@@ -28,6 +28,21 @@ router.get('/create', (req,res)=>{
     })
 })
 
+// Geter of Sign Up
+router.get('/signUp', (req,res)=>{
+    res.render('signUp',{
+        title: 'Sign Up',
+        isCreate: true
+    })
+})
+
+// Geter of MAIN page
+router.get('/main', (req,res)=>{
+    res.render('main',{
+        title: 'CryWEB',
+    })
+})
+
 router.post('/create',async(req,res)=>{
     const todo = new Todo({
         //название input
@@ -47,6 +62,22 @@ router.post("/complete",async(req,res)=>{
     res.redirect('/');
 })
 
+// Poster для записи сообщения в базу даних
+router.post("/main",async(req,res)=>{
+    // даные из input где логин получателя
+    let recipient = req.body.recipient
+    // Запрос по логину 
+    const user = await User.findOne({login: `${recipient}`});
+    //даные из тексотвой области
+    let text = req.body.textarea;
+    console.log(user,"FIRST");
+    //добавление в масив собщений на базе даных нового
+    user.messages.push(text);
+    await user.save();
+    console.log(user);
+    // res.redirect('/main');
+})
+
 router.post('/signUp', async(req,res)=>{
 
     //Загрузка базы даних пользователей
@@ -54,11 +85,11 @@ router.post('/signUp', async(req,res)=>{
     //console.log(users);
 
     //Флаг уникальности
-    let a = true;
+    let flag = true;
     //Проверка введёного логина на уникальность
     for (let i = 0; i < users.length; i++) {
         if (users[i].login == req.body.login) {
-            a = false;
+            flag = false;
             console.log("NO");
             break
             // res.redirect('/');
@@ -66,7 +97,7 @@ router.post('/signUp', async(req,res)=>{
     }
 
     //Взависимости от проверки уникальсносты флаг будет иметь значение true или false, и взависимости от значении будет запись в базу даних или сообщение пользователю
-    if (a) {
+    if (flag) {
         const user = new User({
             login: req.body.login,
             password: req.body.password,
@@ -76,6 +107,37 @@ router.post('/signUp', async(req,res)=>{
         await user.save()
     }
     res.redirect('/');
+})
+
+//Авторизацыя
+router.post('/signIn', async(req,res)=>{
+
+    //Загрузка базы даних пользователей
+    const users = await User.find({}).lean();
+    //console.log(users);
+
+    //Проверка введёного логина и после пороля
+    for (let i = 0; i < users.length; i++) {
+        //Поиск указаного логина
+        if (users[i].login == req.body.login) {
+            //Сверение паролей
+            if (req.body.password == users[i].password) {
+                res.redirect('/main');
+                return;
+            }else{
+                res.render('index',{
+                    title: 'Sign Up',
+                    answer: 'Password is not verification'
+                })
+                return;
+            }
+        }        
+    }
+    //Если указаного логина нет в базе
+    res.render('index',{
+        title: 'Sign Up',
+        answer: 'This user is not be'
+    })
 })
 
 module.exports = router

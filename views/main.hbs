@@ -1,0 +1,17 @@
+    <div class="container w-75">
+        <header class="border-bootem">
+            <button onclick="logout()" class="btn btn-primary btn-lg h-100">EXIT</button>
+        </header>
+        <main class="p-3">
+            <form action="/main" method="POST">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" name="recipient" placeholder="Login">
+                    <label for="floatingInput">Login of recipient</label>
+                </div>
+                <div class="form-floating">
+                    <textarea class="form-control" name="textarea" placeholder="Leave a comment here" id="floatingTextarea2" style="height: 60vh"></textarea>
+                    <label for="floatingTextarea2">Message</label>
+                </div>
+                <button class="btn btn-primary mt-3" type="submit">Send</button>
+            </form>
+        </main>
