@@ -1,7 +1,10 @@
 const {Router} = require('express')
 const Todo = require('../models/Todo');
 const User = require('../models/user');
-const router = Router()
+const router = Router();
+const cookieParser = require('cookie-parser')
+
+router.use(cookieParser())
 
 router.get('/', async (req,res)=>{
     //lean()для роботы HBS 
@@ -28,6 +31,32 @@ router.get('/create', (req,res)=>{
     })
 })
 
+router.get('/getMessages', async (req,res)=>{
+    //Загрузка базы даних пользователей
+    const users = await User.find({}).lean();
+    let user = {}
+
+    console.log(req.cookies)
+    //Проверка введёного логина и пороля
+    for (let i = 0; i < users.length; i++) {
+        //Поиск указаного логина
+        if (users[i].login == req.cookies.Login) {
+            //Сверение паролей
+            if (req.cookies.Password == users[i].password) {
+                //res.redirect('/main');
+                user = users[i].messages;
+                return res.json(user);
+            }else{
+                break
+            }
+        }        
+    }
+    res.render('index',{
+        title: 'Sign Up',
+        answer: 'Please sigin up'
+    })
+})
+
 // Geter of Sign Up
 router.get('/signUp', (req,res)=>{
     res.render('signUp',{
@@ -36,8 +65,8 @@ router.get('/signUp', (req,res)=>{
     })
 })
 
-// Geter of MAIN page
-router.get('/main', (req,res)=>{
+//Geter of MAIN page
+router.get('/main', async (req,res)=>{
     res.render('main',{
         title: 'CryWEB',
     })
@@ -75,6 +104,10 @@ router.post("/main",async(req,res)=>{
     user.messages.push(text);
     await user.save();
     console.log(user);
+    res.render('main',{
+        title: 'CryWEB',
+        user
+    })
     // res.redirect('/main');
 })
 
@@ -122,6 +155,22 @@ router.post('/signIn', async(req,res)=>{
         if (users[i].login == req.body.login) {
             //Сверение паролей
             if (req.body.password == users[i].password) {
+                //res.redirect('/main');
+                const user = 
+                {
+                    messages: users[i].messages,
+                    id: users[i]._id
+                }
+                res.cookie('Login',`${users[i].login}`,{
+                    path: '/main'
+                })
+                res.cookie('Password',`${users[i].password}`,{
+                    path: '/main'
+                })
+                // res.render('main',{
+                //     title: 'CryWEB',
+                //     user
+                // })
                 res.redirect('/main');
                 return;
             }else{

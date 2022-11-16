@@ -3,15 +3,78 @@
             <button onclick="logout()" class="btn btn-primary btn-lg h-100">EXIT</button>
         </header>
         <main class="p-3">
+            <div id="messagesList">
+                {{#if user.messages.length}}
+                <ul>
+                    {{!-- вывод масива через each --}}
+                    {{#each user.messages}}
+                        <li class="todo">
+                            <form action="/delete" method="POST">
+                                <label for="">
+                                        <input type="checkbox" checked name="completed">
+                                        <span class="complete">{{this}}</span>
+                                    {{!-- <input type="hidden" value="{{_id}}" name="id"> --}}
+                                    
+                                    <button class="btn btn-primary" type="submit">Save</button>
+                                </label>
+                            </form>
+                        </li>
+                    {{/each}}
+                </ul>
+                {{else}}
+                <p>No messages</p>
+                {{/if}}
+            </div>
             <form action="/main" method="POST">
                 <div class="form-floating mb-3">
                     <input type="text" class="form-control" name="recipient" placeholder="Login">
                     <label for="floatingInput">Login of recipient</label>
                 </div>
                 <div class="form-floating">
-                    <textarea class="form-control" name="textarea" placeholder="Leave a comment here" id="floatingTextarea2" style="height: 60vh"></textarea>
+                    <textarea class="form-control" name="textarea" placeholder="Leave a comment here" id="floatingTextarea2" style="height: 30vh"></textarea>
                     <label for="floatingTextarea2">Message</label>
                 </div>
                 <button class="btn btn-primary mt-3" type="submit">Send</button>
             </form>
         </main>
+
+        <script>
+
+            //масив где храниться HTML код с указаними письмами для вывода 
+            let boxInner = new Array()
+            //Сохраняем силку на HTML блок
+            let box = document.querySelector('#messagesList')
+
+            var xhr = new XMLHttpRequest();
+
+            xhr.open("GET", '/getMessages', true);
+
+            xhr.onload = function () {
+                if (xhr.status !== 200) {
+                    return;
+                }
+                const response = JSON.parse(xhr.response);
+                console.log(response)
+                //Вывод всех писем
+                for (let i = 0; i < response.length; i++) {
+                boxInner[i] = 
+                    `
+                    <div class="">
+                        <div class="d-flex">
+                            <h6 class='my-1'>
+                                Username: ${response[i]}
+                            </h6>
+                            <button onclick="deleteUser(this)" id="button${i}" class="btn btn-primary delete">Delete</button>
+                            
+                        </div>
+                    </div>
+                    `
+                }  
+                //Размещение в блок
+                box.innerHTML = boxInner.join('')
+            }
+
+            xhr.send();
+
+            //console.log(user)
+        </script>
