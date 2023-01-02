@@ -1,11 +1,17 @@
-<form action="signUp" method="POST">
-    <div class="form-floating mb-3">
-    <input type="text" class="form-control" name="login" placeholder="Login">
-    <label for="floatingInput">Login</label>
-    </div>
-    <div class="form-floating">
-    <input type="password" class="form-control" name="password" placeholder="Password">
-    <label for="floatingPassword">Password</label>
-    </div>
-    <button class="btn btn-primary mt-3" type="submit">SIGN UP</button>
-</form>
+<script src="./index.min.js"></script>
+<script src="./signUp.js"></script>
+
+<div class="container w-75">
+    {{!-- <form action="signUp" method="POST"> --}}
+        <div class="form-floating mb-3">
+        <input type="text" class="form-control" id="login" name="login" placeholder="Login">
+        <label for="floatingInput">Login</label>
+        </div>
+        <div class="form-floating">
+        <input type="password" class="form-control" id="password" name="password" placeholder="Password">
+        <label for="floatingPassword">Password</label>
+        </div>
+        <button class="btn btn-primary mt-3" onclick="registration()">SIGN UP</button>
+    {{!-- </form> --}}
+        <div id="key"></div>
+</div>

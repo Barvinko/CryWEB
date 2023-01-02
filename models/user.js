@@ -8,7 +8,11 @@ const schema = new Schema({
         require: true
     },
     password: {
-        type: Number,
+        type: String,
+        require: true
+    },
+    publicKey:{
+        type: Array,
         require: true
     },
     messages: {

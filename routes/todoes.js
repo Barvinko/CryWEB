@@ -2,7 +2,9 @@ const {Router} = require('express')
 const Todo = require('../models/Todo');
 const User = require('../models/user');
 const router = Router();
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
+const eccryptoJS = require("eccrypto-js");
+const express = require("express");
 
 router.use(cookieParser())
 
@@ -31,7 +33,15 @@ router.get('/create', (req,res)=>{
     })
 })
 
-router.get('/getMessages', async (req,res)=>{
+router.get('/main/exit', (req,res)=>{
+    console.log("WORK")
+    console.log(req.cookies)
+    res.clearCookie('Login')
+    res.clearCookie('Password')
+    res.redirect('/')
+})
+
+router.get('/main', async (req,res)=>{
     //Загрузка базы даних пользователей
     const users = await User.find({}).lean();
     let user = {}
@@ -65,12 +75,12 @@ router.get('/signUp', (req,res)=>{
     })
 })
 
-//Geter of MAIN page
-router.get('/main', async (req,res)=>{
-    res.render('main',{
-        title: 'CryWEB',
-    })
-})
+// //Geter of MAIN page
+// router.get('/main', async (req,res)=>{
+//     res.render('main',{
+//         title: 'CryWEB',
+//     })
+// })
 
 router.post('/create',async(req,res)=>{
     const todo = new Todo({
@@ -92,7 +102,7 @@ router.post("/complete",async(req,res)=>{
 })
 
 // Poster для записи сообщения в базу даних
-router.post("/main",async(req,res)=>{
+router.post("/write",async(req,res)=>{
     // даные из input где логин получателя
     let recipient = req.body.recipient
     // Запрос по логину 
@@ -111,14 +121,26 @@ router.post("/main",async(req,res)=>{
     // res.redirect('/main');
 })
 
-router.post('/signUp', async(req,res)=>{
+const jsonParser = express.json()
 
+router.post("/test",jsonParser, async(req,res)=>{
+
+    console.log(req.body)
+    if(!req.body) return res.sendStatus(400);
+    res.json(req.body)
+})
+
+//Регістрація
+router.post('/signUp',jsonParser, async(req,res)=>{
+
+    if(!req.body) return res.sendStatus(400);
     //Загрузка базы даних пользователей
     const users = await User.find({}).lean();
     //console.log(users);
 
     //Флаг уникальности
     let flag = true;
+    console.log(req.body.login)
     //Проверка введёного логина на уникальность
     for (let i = 0; i < users.length; i++) {
         if (users[i].login == req.body.login) {
@@ -134,16 +156,21 @@ router.post('/signUp', async(req,res)=>{
         const user = new User({
             login: req.body.login,
             password: req.body.password,
+            publicKey: req.body.publicKey,
             messages: []
         })
         console.log(user);
         await user.save()
+        res.json({"answer": true})
+        //res.redirect('/');
+    }else{
+        res.json({"answer": false})
     }
-    res.redirect('/');
+
 })
 
 //Авторизацыя
-router.post('/signIn', async(req,res)=>{
+router.post('/main', async(req,res)=>{
 
     //Загрузка базы даних пользователей
     const users = await User.find({}).lean();
@@ -156,22 +183,24 @@ router.post('/signIn', async(req,res)=>{
             //Сверение паролей
             if (req.body.password == users[i].password) {
                 //res.redirect('/main');
-                const user = 
-                {
-                    messages: users[i].messages,
-                    id: users[i]._id
-                }
+                // const user = 
+                // {
+                //     messages: users[i].messages,
+                //     id: users[i]._id
+                // }
+                // res.clearCookie()
                 res.cookie('Login',`${users[i].login}`,{
-                    path: '/main'
+                    path: '/main',
+                    httpOnly: true
                 })
                 res.cookie('Password',`${users[i].password}`,{
-                    path: '/main'
+                    path: '/main',
+                    httpOnly: true
                 })
-                // res.render('main',{
-                //     title: 'CryWEB',
-                //     user
-                // })
-                res.redirect('/main');
+                res.render('main',{
+                    title: 'CryWEB',
+                })
+                //res.redirect('/main');
                 return;
             }else{
                 res.render('index',{

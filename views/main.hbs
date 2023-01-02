@@ -1,31 +1,14 @@
     <div class="container w-75">
         <header class="border-bootem">
-            <button onclick="logout()" class="btn btn-primary btn-lg h-100">EXIT</button>
+            <form action="/main/exit" method="get">
+                <button type="submit" class="btn btn-primary btn-lg h-100">EXIT</button>
+            </form>
         </header>
         <main class="p-3">
             <div id="messagesList">
-                {{#if user.messages.length}}
-                <ul>
-                    {{!-- вывод масива через each --}}
-                    {{#each user.messages}}
-                        <li class="todo">
-                            <form action="/delete" method="POST">
-                                <label for="">
-                                        <input type="checkbox" checked name="completed">
-                                        <span class="complete">{{this}}</span>
-                                    {{!-- <input type="hidden" value="{{_id}}" name="id"> --}}
-                                    
-                                    <button class="btn btn-primary" type="submit">Save</button>
-                                </label>
-                            </form>
-                        </li>
-                    {{/each}}
-                </ul>
-                {{else}}
-                <p>No messages</p>
-                {{/if}}
+
             </div>
-            <form action="/main" method="POST">
+            <form action="/write" method="POST">
                 <div class="form-floating mb-3">
                     <input type="text" class="form-control" name="recipient" placeholder="Login">
                     <label for="floatingInput">Login of recipient</label>
@@ -40,14 +23,22 @@
 
         <script>
 
+            //function exit(){
+            //    let xhr = new XMLHttpRequest();
+//
+  //              xhr.open("GET", '/main/exit', true);
+//
+  //              xhr.send();
+    //        }
+
             //масив где храниться HTML код с указаними письмами для вывода 
             let boxInner = new Array()
             //Сохраняем силку на HTML блок
             let box = document.querySelector('#messagesList')
 
-            var xhr = new XMLHttpRequest();
+            let xhr = new XMLHttpRequest();
 
-            xhr.open("GET", '/getMessages', true);
+            xhr.open("GET", '/main', true);
 
             xhr.onload = function () {
                 if (xhr.status !== 200) {
@@ -75,6 +66,4 @@
             }
 
             xhr.send();
-
-            //console.log(user)
         </script>
