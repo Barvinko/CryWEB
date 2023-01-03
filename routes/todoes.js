@@ -158,18 +158,18 @@ router.post("/exchageSessionKey", jsonParser, async(req,res)=>{
 
     //Запис ключів сеансу у БД
     const session = new Session({
-        sessionPrivateKey: sessionKey.privateKey,
-        sessionPublicKey: sessionKey.publicKey,
-        sessionPublicKeyUser: sessionPublicKeyUser.publicKey,
-        sessionKey: sharedKey,
-        IV: IV
+        sessionPrivateKey:  JSON.stringify(sessionKey.privateKey),
+        sessionPublicKey: JSON.stringify(sessionKey.publicKey),
+        sessionPublicKeyUser:  JSON.stringify(sessionPublicKeyUser.publicKey),
+        sessionKey:  JSON.stringify(sharedKey),
+        IV:  JSON.stringify(IV)
     })
     await session.save()
     console.log("session.id",session.id)
 
     //Відправка відкритого ключа сеансу сервера та id сеансу 
     res.json({
-        "sessionPublicKeyServer": session.sessionPublicKey,
+        "sessionPublicKeyServer": sessionKey.publicKey,
         "id": session.id
     })
 })
@@ -249,15 +249,31 @@ router.post('/signIn', jsonParser, async(req,res)=>{
 
     //Загрузка базы даних пользователей
     const users = await User.find({}).lean();
-    
+    let id = req.body.id;
+    console.log(id);
+    const session = await Session.findOne({ _id: id }).lean();
+    console.log(session);
     //console.log(users);
     console.log(req.body);
+    let login = JSON.parse(req.body.login);
+    login = adaptationAES(login,login.data.length)
+    let password = JSON.parse(req.body.password);
+    password = adaptationAES(password,password.data.length)
+    console.log(session.sessionKey);
 
+    let sessionKey = adaptationAES(JSON.parse(session.sessionKey),32);
+    let IV = adaptationAES(JSON.parse(session.IV), 16);
+
+    login = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, login);
+    password = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, password);
+    console.log(login.toString(),password.toString());
+    //res.json({"password": password,"login":login})
+    //return;
     //Проверка введёного логина и после пороля
     for (let i = 0; i < users.length; i++) {
         //Поиск указаного логина
 
-        if (users[i].login == req.body.login) {
+        if (users[i].login == login) {
             console.log("login true");
             // //хешування
             // let password = eccryptoJS.utf8ToBuffer(req.body.password);
@@ -266,7 +282,7 @@ router.post('/signIn', jsonParser, async(req,res)=>{
             // //console.log(password)
 
             //Сверение паролей
-            if (req.body.password == users[i].password) {
+            if (password == users[i].password) {
                 console.log("password true");
                 //res.redirect('/main');
                 // const user = 

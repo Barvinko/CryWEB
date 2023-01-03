@@ -93,14 +93,15 @@ async function signIn() {
     console.log(login,password)
 
     //Запис логіну та паролю
-    sessionStorage.setItem(`Login`, `${login}`);
-    sessionStorage.setItem(`Password`, `${password}`);
+    sessionStorage.setItem(`Login`, JSON.stringify(login));
+    sessionStorage.setItem(`Password`, JSON.stringify(password));
 
     console.log(login,password)
 
     let data = {
         "login": sessionStorage.getItem("Login"),
         "password": sessionStorage.getItem("Password"),
+        "id": session.id
         };
     let dataJSON = JSON.stringify(data)
     console.log(data)
