@@ -12,7 +12,7 @@ const schema = new Schema({
         require: true
     },
     publicKey:{
-        type: Array,
+        type: Object,
         require: true
     },
     messages: {

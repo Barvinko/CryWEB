@@ -1,6 +1,7 @@
 const {Router} = require('express')
 const Todo = require('../models/Todo');
 const User = require('../models/user');
+const Session = require('../models/session');
 const router = Router();
 const cookieParser = require('cookie-parser');
 const eccryptoJS = require("eccrypto-js");
@@ -8,7 +9,32 @@ const express = require("express");
 
 router.use(cookieParser())
 
-router.get('/', async (req,res)=>{
+function getIV(key) {
+    let iv = eccryptoJS.randomBytes(16);
+    for (let i = 0; i < iv.length; i++) {
+        iv[i] = key[i]
+    }
+    return iv;
+}
+
+function adaptationPublicKey(key) {
+    let sessionPublicKeyUser = eccryptoJS.generateKeyPair();
+    for (let i = 0; i < sessionPublicKeyUser.publicKey.length; i++) {
+        sessionPublicKeyUser.publicKey[i] = key.data[i]
+    }
+    return sessionPublicKeyUser
+}
+function adaptationAES(key,bit) {
+    let AESkey = eccryptoJS.randomBytes(bit);
+    for (let i = 0; i < AESkey.length; i++) {
+        AESkey[i] = key.data[i]
+    }
+    return AESkey
+}
+
+const jsonParser = express.json()
+
+router.get('/', jsonParser, async (req,res)=>{
     //lean()для роботы HBS 
     const todos = await Todo.find().lean()
     //let arrData = JSON.parse(todos);
@@ -101,6 +127,55 @@ router.post("/complete",async(req,res)=>{
     res.redirect('/');
 })
 
+router.post("/exchageSessionKey", jsonParser, async(req,res)=>{
+    console.log(req.body);
+    //Створювання ключів сеансу сервера
+    let sessionKey = eccryptoJS.generateKeyPair();
+    console.log(sessionKey.publicKey)
+
+    //адаптування відкритого ключа клієнта
+    // function adaptationPublicKey(key) {
+    //     let sessionPublicKeyUser = eccryptoJS.generateKeyPair();
+    //     for (let i = 0; i < sessionPublicKeyUser.publicKey.length; i++) {
+    //         sessionPublicKeyUser.publicKey[i] = key.data[i]
+    //     }
+    //     return sessionPublicKeyUser
+    // }
+
+    let sessionPublicKeyUser = adaptationPublicKey(req.body)
+    // for (let i = 0; i < sessionPublicKeyUser.publicKey.length; i++) {
+    //     sessionPublicKeyUser.publicKey[i] = req.body.data[i]
+    // }
+
+    console.log(sessionPublicKeyUser.publicKey)
+    //Узгодження ключів сеансу
+    let sharedKey = await eccryptoJS.derive(
+        sessionKey.privateKey,
+        sessionPublicKeyUser.publicKey
+    );
+
+    let IV = getIV(sessionKey.publicKey)
+
+    //Запис ключів сеансу у БД
+    const session = new Session({
+        sessionPrivateKey: sessionKey.privateKey,
+        sessionPublicKey: sessionKey.publicKey,
+        sessionPublicKeyUser: sessionPublicKeyUser.publicKey,
+        sessionKey: sharedKey,
+        IV: IV
+    })
+    await session.save()
+    console.log("session.id",session.id)
+
+    //Відправка відкритого ключа сеансу сервера та id сеансу 
+    res.json({
+        "sessionPublicKeyServer": session.sessionPublicKey,
+        "id": session.id
+    })
+})
+
+
+
 // Poster для записи сообщения в базу даних
 router.post("/write",async(req,res)=>{
     // даные из input где логин получателя
@@ -121,7 +196,7 @@ router.post("/write",async(req,res)=>{
     // res.redirect('/main');
 })
 
-const jsonParser = express.json()
+// const jsonParser = express.json()
 
 router.post("/test",jsonParser, async(req,res)=>{
 
@@ -170,18 +245,29 @@ router.post('/signUp',jsonParser, async(req,res)=>{
 })
 
 //Авторизацыя
-router.post('/main', async(req,res)=>{
+router.post('/signIn', jsonParser, async(req,res)=>{
 
     //Загрузка базы даних пользователей
     const users = await User.find({}).lean();
+    
     //console.log(users);
+    console.log(req.body);
 
     //Проверка введёного логина и после пороля
     for (let i = 0; i < users.length; i++) {
         //Поиск указаного логина
+
         if (users[i].login == req.body.login) {
+            console.log("login true");
+            // //хешування
+            // let password = eccryptoJS.utf8ToBuffer(req.body.password);
+            // password = await eccryptoJS.sha512(password);
+            // password = password.join('')
+            // //console.log(password)
+
             //Сверение паролей
             if (req.body.password == users[i].password) {
+                console.log("password true");
                 //res.redirect('/main');
                 // const user = 
                 // {
@@ -197,25 +283,28 @@ router.post('/main', async(req,res)=>{
                     path: '/main',
                     httpOnly: true
                 })
-                res.render('main',{
-                    title: 'CryWEB',
-                })
+                res.json({"answer": 1})
+                // res.render('main',{
+                //     title: 'CryWEB',
+                // })
                 //res.redirect('/main');
                 return;
             }else{
-                res.render('index',{
-                    title: 'Sign Up',
-                    answer: 'Password is not verification'
-                })
+                // res.render('index',{
+                //     title: 'Sign Up',
+                //     answer: 'Password is not verification'
+                // })
+                res.json({"answer": 2})
                 return;
             }
         }        
     }
     //Если указаного логина нет в базе
-    res.render('index',{
-        title: 'Sign Up',
-        answer: 'This user is not be'
-    })
+    res.json({"answer": 0})
+    // res.render('index',{
+    //     title: 'Sign Up',
+    //     answer: 'This user is not be'
+    // })
 })
 
 module.exports = router
