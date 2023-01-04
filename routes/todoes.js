@@ -206,6 +206,7 @@ router.post("/getMessage", jsonParser, async(req,res)=>{
     // Отримання IV
     let messageIV = getIV(messageKey.publicKey)
 
+    //Дані з бази даних для дешифруванн повідомлення
     let message = userRecipient.messages[parseInt(data.messageId)].message;
     let messageKeyM = userRecipient.messages[parseInt(data.messageId)].messageKeyM;
     let messageIVM = userRecipient.messages[parseInt(data.messageId)].messageIVM;
@@ -223,7 +224,7 @@ router.post("/getMessage", jsonParser, async(req,res)=>{
         "recipientPublicKey": recipientPublicKey
     })
 
-    //Шифрування ключа повідомлення з бази даних
+    //Шифрування ключа повідомлення з бази данихб та відкритий ключ отримувача
     dataSend = JSON.stringify(dataSend)
     dataSend = eccryptoJS.utf8ToBuffer(dataSend);
     dataSend = await eccryptoJS.aesCbcEncrypt(messageIV, messageSharedKey, dataSend);
@@ -370,24 +371,6 @@ router.post("/write", jsonParser, async(req,res)=>{
 
     //Відпрвка обькта з зашифрованими даними
     res.json(sendData)
-    return;
-///////////////////////////////////////
-    // даные из input где логин получателя
-    let recipient = req.body.recipient
-    // Запрос по логину 
-    //const user = await User.findOne({login: `${recipient}`});
-    //даные из тексотвой области
-    let text = req.body.textarea;
-    console.log(user,"FIRST");
-    //добавление в масив собщений на базе даных нового
-    user.messages.push(text);
-    await user.save();
-    console.log(user);
-    res.render('main',{
-        title: 'CryWEB',
-        user
-    })
-    // res.redirect('/main');
 })
 
 router.post("/writeMessage", jsonParser, async(req,res)=>{
@@ -444,16 +427,33 @@ router.post("/test",jsonParser, async(req,res)=>{
 router.post('/signUp',jsonParser, async(req,res)=>{
 
     if(!req.body) return res.sendStatus(400);
+
+    let primeData = req.body;
+    let id = primeData.id;
+    console.log(id)
+    let session = await Session.findById(id);
+    let data = adaptationAES(primeData.data,primeData.data.data.length)
+
+    //Форматування сеансового ключа
+    let sessionKey = adaptationAES(JSON.parse(session.sessionKey),32);
+    let IV = adaptationAES(JSON.parse(session.IV), 16);
+
+    //Дешифрування даних з клієнта
+    data = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, data);
+    //Трансформація бітів у строку, та потім у обькт з даними
+    data = JSON.parse(data.toString())
+    console.log(data);
+
     //Загрузка базы даних пользователей
     const users = await User.find({}).lean();
     //console.log(users);
 
     //Флаг уникальности
     let flag = true;
-    console.log(req.body.login)
+    console.log(data.login)
     //Проверка введёного логина на уникальность
     for (let i = 0; i < users.length; i++) {
-        if (users[i].login == req.body.login) {
+        if (users[i].login == data.login) {
             flag = false;
             console.log("NO");
             break
@@ -464,9 +464,9 @@ router.post('/signUp',jsonParser, async(req,res)=>{
     //Взависимости от проверки уникальсносты флаг будет иметь значение true или false, и взависимости от значении будет запись в базу даних или сообщение пользователю
     if (flag) {
         const user = new User({
-            login: req.body.login,
-            password: req.body.password,
-            publicKey: req.body.publicKey,
+            login: data.login,
+            password: data.password,
+            publicKey: data.publicKey,
             messages: []
         })
         console.log(user);

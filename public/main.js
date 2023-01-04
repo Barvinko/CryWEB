@@ -159,10 +159,10 @@ async function openMessage(mesangeDiv) {
     getMessage.addEventListener("load", async function () {
         let dataAnswer = JSON.parse(getMessage.response)
         console.log(dataAnswer);
-        
+
+        //Дешифрование відкритого ключа сервера
         let messagePublicKeyServer = dataAnswer.messagePublicKeyServer;
         messagePublicKeyServer = adaptationAES(messagePublicKeyServer, messagePublicKeyServer.data.length)
-        //console.log(messagePublicKeyServer)
         messagePublicKeyServer = await eccryptoJS.aesCbcDecrypt(sessionIV, sessionKey, messagePublicKeyServer);
         console.log(messagePublicKeyServer)
 
@@ -182,6 +182,7 @@ async function openMessage(mesangeDiv) {
 
         console.log(keys)
 
+        //Ініціалізування ключа повідомленн з бази даних, його IV, та ключ отримувача
         let messageKeyM = JSON.parse(keys.messageKeyM)
         let messageIVM = JSON.parse(keys.messageIVM)
         let recipientPublicKey = adaptationAES(keys.recipientPublicKey, keys.recipientPublicKey.data.length)
@@ -202,11 +203,12 @@ async function openMessage(mesangeDiv) {
         messageEncry = JSON.parse(messageEncry.toString())
         console.log(messageEncry)
 
+        //Формалізація відкритого ключа відправника
         let PublicKeySender = messageEncry.PublicKeySender;
         PublicKeySender = adaptationAES(PublicKeySender, PublicKeySender.data.length)
 
-
-        let sender = '40 b0 10 12 7c 11 b6 16 d4 28 dd ed e0 1c e8 42 a3 53 5b dd df 39 18 b6 5a 61 64 14 e0 fd 3a b6'
+        //Приведення веденного таємного ключа користовуча
+        let sender = '4a fd 6d 93 27 2f 48 9e 13 e1 da 6e 46 ea ca ec 48 a5 95 b6 8e 0c 85 84 95 7d f4 7c 59 4a 9d 23'
         sender = sender.split(' ').join('');
         sender = sender.split('');
         console.log(sender)
@@ -229,11 +231,13 @@ async function openMessage(mesangeDiv) {
         //IV ключа користувачів
         let userIV = getIV(recipientPublicKey);
 
+        //Формалізація повідомлення
         let message = messageEncry.message;
         message = adaptationAES(message, message.data.length)
 
         console.log(UserSharedKey)
 
+        //Дешифрування повідомлення
         let openMessage = await eccryptoJS.aesCbcDecrypt(userIV, UserSharedKey, message);
         console.log("ddd")
         openMessage = openMessage.toString()

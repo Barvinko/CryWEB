@@ -1,20 +1,10 @@
-// в 16-ричную систему
-//function keyTo16(privateKey) {
-//     let Key = []
-
-//             for (let i = 0; i < privateKey.length; i++) {
-//                 Key[i] = privateKey[i].toString(16);
-//                 console.log(Key[i].length)
-//                 if (Key[i].length == 1) {
-//                     Key[i] = "0" + Key[i]
-//                 }
-//             }
-
-//             console.log(Key)
-//             Key = Key.join(' ')
-//             console.log(Key)
-//             return Key;
-// }
+function adaptationAES(key,bit) {
+    let AESkey = eccryptoJS.randomBytes(bit);
+    for (let i = 0; i < AESkey.length; i++) {
+        AESkey[i] = key.data[i]
+    }
+    return AESkey
+}
 
 async function registration(){
     let keyClient = eccryptoJS.generateKeyPair();
@@ -36,8 +26,23 @@ async function registration(){
         "password": password.toString(),
         "publicKey": keyClient.publicKey
         };
-    let dataJSON = JSON.stringify(data)
-    console.log(data)
+    data = JSON.stringify(data)
+
+    //дані сесії на кліенте
+    let session = JSON.parse(sessionStorage.getItem("session"))
+    console.log(session)
+
+    let sessionKey = adaptationAES(session.sessionKey,32);
+    let sessionIV = adaptationAES(session.IV,16);
+    let sessionId = session.id;
+
+    data = eccryptoJS.utf8ToBuffer(data);
+    data = await eccryptoJS.aesCbcEncrypt(sessionIV, sessionKey, data);
+
+    data = JSON.stringify({
+        "data": data,
+        "id": sessionId
+    })
 
     //Відправка даних  на сервер
     let xhr = new XMLHttpRequest()
@@ -74,5 +79,5 @@ async function registration(){
         }
     })
 
-    xhr.send(dataJSON);
+    xhr.send(data);
 }
