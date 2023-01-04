@@ -112,15 +112,134 @@ function getIV(key) {
 // xhr.send();
 }())
 
-function openMessage(mesangeDiv) {
+async function openMessage(mesangeDiv) {
     console.log(mesangeDiv.id)
     let mesangeId = mesangeDiv.id.split('');
     mesangeId = mesangeId[1];
     console.log(mesangeId)
 
+    //дані сесії на кліенте
+    let session = JSON.parse(sessionStorage.getItem("session"))
+    let login = sessionStorage.getItem("Login")
+    console.log(session)
+
     //генерація ключей повідомлення повідомлення
     let messageKey = eccryptoJS.generateKeyPair();
     let messagePublicKey = messageKey.publicKey;
+    // console.log(sessionKey)
+
+    let sessionKey = adaptationAES(session.sessionKey,32);
+    let sessionIV = adaptationAES(session.IV,16);
+    let sessionId = session.id;
+
+    let data = {
+        'login': login,
+        'messagePublicKeyUser': messagePublicKey,
+        'messageId': mesangeId,
+    }
+
+    console.log(data)
+
+    data = JSON.stringify(data);
+    console.log(data)
+
+    //Шифрування сеансовими ключаси дані для узгодженн ключа повідомлення
+    data = eccryptoJS.utf8ToBuffer(data);
+    data = await eccryptoJS.aesCbcEncrypt(sessionIV, sessionKey, data);
+    console.log(data)
+    data = JSON.stringify({
+        'id': sessionId,
+        'data': data
+    })
+
+    //POST запрос для відпраки даних заякими отримати повідомлення з сервера
+    let getMessage = new XMLHttpRequest()
+    getMessage.open('POST', "/getMessage", true)
+    getMessage.setRequestHeader('Content-Type', 'application/json')
+    getMessage.addEventListener("load", async function () {
+        let dataAnswer = JSON.parse(getMessage.response)
+        console.log(dataAnswer);
+        
+        let messagePublicKeyServer = dataAnswer.messagePublicKeyServer;
+        messagePublicKeyServer = adaptationAES(messagePublicKeyServer, messagePublicKeyServer.data.length)
+        //console.log(messagePublicKeyServer)
+        messagePublicKeyServer = await eccryptoJS.aesCbcDecrypt(sessionIV, sessionKey, messagePublicKeyServer);
+        console.log(messagePublicKeyServer)
+
+        //Узгодження ключа повідомлення
+        let messageSharedKey = await eccryptoJS.derive(
+            messageKey.privateKey,
+            messagePublicKeyServer
+        );
+        //IV ключа повідомлення
+        let messageIV = getIV(messagePublicKeyServer);
+
+        //Дешифрування ключа повідомлення с бази даних, яким зашифровано повідомлення
+        let keys = dataAnswer.keys;
+        keys = adaptationAES(keys, keys.data.length)
+        keys = await eccryptoJS.aesCbcDecrypt(messageIV, messageSharedKey, keys);
+        keys = JSON.parse(JSON.parse(keys.toString()));
+
+        console.log(keys)
+
+        let messageKeyM = JSON.parse(keys.messageKeyM)
+        let messageIVM = JSON.parse(keys.messageIVM)
+        let recipientPublicKey = adaptationAES(keys.recipientPublicKey, keys.recipientPublicKey.data.length)
+
+        console.log({
+            "messageKeyM": messageKeyM,
+            "messageIVM": messageIVM
+        })
+
+        messageKeyM = adaptationAES(messageKeyM, messageKeyM.data.length)
+        messageIVM = adaptationAES(messageIVM, messageIVM.data.length)
+
+
+        //Дешифрування ключа повідомлення с бази даних, яким зашифровано повідомлення
+        let messageEncry = dataAnswer.message;
+        messageEncry = adaptationAES(messageEncry, messageEncry.data.length)
+        messageEncry = await eccryptoJS.aesCbcDecrypt(messageIVM, messageKeyM, messageEncry);
+        messageEncry = JSON.parse(messageEncry.toString())
+        console.log(messageEncry)
+
+        let PublicKeySender = messageEncry.PublicKeySender;
+        PublicKeySender = adaptationAES(PublicKeySender, PublicKeySender.data.length)
+
+
+        let sender = '40 b0 10 12 7c 11 b6 16 d4 28 dd ed e0 1c e8 42 a3 53 5b dd df 39 18 b6 5a 61 64 14 e0 fd 3a b6'
+        sender = sender.split(' ').join('');
+        sender = sender.split('');
+        console.log(sender)
+        senderPrivateKey = eccryptoJS.generateKeyPair();
+        senderPrivateKey = senderPrivateKey.privateKey;
+        for (let i = 0; i < senderPrivateKey.length; i++) {
+            let temp = sender.splice(0,2)
+            temp = parseInt(temp.join(''),16)
+            senderPrivateKey[i] = temp
+            
+        }
+
+        //Узгодження ключа користувачів
+        let UserSharedKey = await eccryptoJS.derive(
+            senderPrivateKey,
+            PublicKeySender
+        );
+        console.log("UserSharedKey",UserSharedKey)
+
+        //IV ключа користувачів
+        let userIV = getIV(recipientPublicKey);
+
+        let message = messageEncry.message;
+        message = adaptationAES(message, message.data.length)
+
+        console.log(UserSharedKey)
+
+        let openMessage = await eccryptoJS.aesCbcDecrypt(userIV, UserSharedKey, message);
+        console.log("ddd")
+        openMessage = openMessage.toString()
+        console.log(openMessage)
+    })
+    getMessage.send(data);
 }
 
 async function writeMessage() {

@@ -148,9 +148,11 @@ router.post("/getParameter", jsonParser, async(req,res)=>{
     loginRecipient = loginRecipient.toString()
     console.log(loginRecipient);
 
+    //Запит даних отримувача
     let userRecipient = await User.findOne({login: `${loginRecipient}`});
     let parameters = [];
 
+    //Обєднання параметрів кожного повідомлення в один масив
     for (let i = 0; i < userRecipient.messages.length; i++) {
         parameters[i] = {
             "date": userRecipient.messages[i].date,
@@ -159,78 +161,86 @@ router.post("/getParameter", jsonParser, async(req,res)=>{
     }
 
     console.log(parameters)
-
     //res.json(userRecipient)
 
+    //Шифрування параметрів та подальша відправка
     parameters = JSON.stringify(parameters)
-
     parameters = eccryptoJS.utf8ToBuffer(parameters);
     parameters = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, parameters);
 
     res.json(parameters)
-    return;
-    // //Запит даних отримувача та відправника
-    // let userRecipient = await User.findOne({login: `${data.recipient}`});
-    // console.log(userRecipient)
-    // if (userRecipient == null) {
-    //     res.json(1)
-    //     return;
-    // }
+})
 
-    // let userSender = await User.findOne({login: `${data.login}`});
+router.post("/getMessage", jsonParser, async(req,res)=>{
 
-    // //Генерація ключей повідомлення сервера
-    // let messageKey = eccryptoJS.generateKeyPair();
-    // let messagePublicKeyUser = adaptationAES(data.messagePublicKeyUser,data.messagePublicKeyUser.data.length)
+    //Отримання id та зашифроване повідомлення
+    let primeData = req.body;
+    let id = primeData.id;
+    console.log(id)
+    let session = await Session.findById(id);
+    let data = adaptationAES(primeData.data,primeData.data.data.length)
 
+    //Форматування сеансового ключа
+    let sessionKey = adaptationAES(JSON.parse(session.sessionKey),32);
+    let IV = adaptationAES(JSON.parse(session.IV), 16);
 
-    // //Узгодження ключів повідомленя
-    // let messageSharedKey = await eccryptoJS.derive(
-    //     messageKey.privateKey,
-    //     messagePublicKeyUser
-    // );
+    //Дешифрування даних з клієнта
+    data = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, data);
+    //Трансформація бітів у строку, та потім у обькт з даними
+    data = JSON.parse(data.toString())
+    console.log(data);
 
-    // // Отримання IV
-    // let messageIV = getIV(messageKey.publicKey)
+    //Запит даних отримувача
+    let userRecipient = await User.findOne({login: `${data.login}`});
 
-    // //Запис тимчасових даних повідомлення
-    // session.message = {
-    //     "messagePrivateKey": JSON.stringify(messageKey.privateKey),
-    //     "messagePublicKey": JSON.stringify(messageKey.publicKey),
-    //     "messagePublicKeyUser":  JSON.stringify(data.messagePublicKeyUser),
-    //     "messageKey":  JSON.stringify(messageSharedKey),
-    //     "IV":  JSON.stringify(messageIV),
-    //     "PublicKeySender": userSender.publicKey,
-    //     "loginRecipient": userRecipient.login,
-    //     "loginSender": userSender.login
-    // }
-    // await session.save()
+    //Генерація ключей повідомлення сервера
+    let messageKey = eccryptoJS.generateKeyPair();
+    let messagePublicKeyUser = adaptationAES(data.messagePublicKeyUser,data.messagePublicKeyUser.data.length)
 
-    // // обьект для відправки з ВК повідомлення сервера та ВК отримувача
-    // let sendData = {
-    //     "messagePublicKeyServer": messageKey.publicKey,
-    //     "UserPublicKey": {
-    //         "PublicKeyRecipient": userRecipient.publicKey,
-    //         "PublicKeySender":userSender.publicKey
-    //     }
-    // }
+    //Узгодження ключів повідомленя
+    let messageSharedKey = await eccryptoJS.derive(
+        messageKey.privateKey,
+        messagePublicKeyUser
+    );
 
+    // Отримання IV
+    let messageIV = getIV(messageKey.publicKey)
 
-    // //console.log(sessionKey,IV)
-    // //Шифрування ВК севреар повідомлення сеасовим ключем 
-    // sendData.messagePublicKeyServer = eccryptoJS.utf8ToBuffer(sendData.messagePublicKeyServer);
-    // sendData.messagePublicKeyServer = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, sendData.messagePublicKeyServer);
-    // //Шифрування ВК отримувача ключем повідомлення
-    // sendData.UserPublicKey = eccryptoJS.utf8ToBuffer(JSON.stringify(sendData.UserPublicKey));
-    // sendData.UserPublicKey = await eccryptoJS.aesCbcEncrypt(messageIV, messageSharedKey, sendData.UserPublicKey);
-    // // sendData.PublicKeyRecipient = eccryptoJS.utf8ToBuffer(sendData.PublicKeyRecipient);
-    // // sendData.PublicKeyRecipient = await eccryptoJS.aesCbcEncrypt(messageIV, messageSharedKey, sendData.PublicKeyRecipient);
-    // //console.log(login,password)
+    let message = userRecipient.messages[parseInt(data.messageId)].message;
+    let messageKeyM = userRecipient.messages[parseInt(data.messageId)].messageKeyM;
+    let messageIVM = userRecipient.messages[parseInt(data.messageId)].messageIVM;
+    let recipientPublicKey = userRecipient.publicKey;
+    //message = adaptationAES(JSON.parse(session.sessionKey),32);
+    console.log(message);
 
-    // //Відпрвка обькта з зашифрованими даними
-    // res.json(sendData)
-    // return;
+    //Шифруванння відкритого ключа повідомлення сервера
+    let messagePublicKeyServer = messageKey.publicKey;
+    messagePublicKeyServer = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, messagePublicKeyServer);
 
+    let dataSend = JSON.stringify({
+        "messageKeyM": messageKeyM,
+        "messageIVM": messageIVM,
+        "recipientPublicKey": recipientPublicKey
+    })
+
+    //Шифрування ключа повідомлення з бази даних
+    dataSend = JSON.stringify(dataSend)
+    dataSend = eccryptoJS.utf8ToBuffer(dataSend);
+    dataSend = await eccryptoJS.aesCbcEncrypt(messageIV, messageSharedKey, dataSend);
+
+    dataSend = {
+        "messagePublicKeyServer": messagePublicKeyServer,
+        "keys": dataSend,
+        "message": message
+    }
+
+    // res.json({
+    //     "data": data,
+    //     "userRecipienter": userRecipient,
+    //     "dataSend": dataSend
+    // })
+
+    res.json(dataSend)
 })
 
 router.post("/exchageSessionKey", jsonParser, async(req,res)=>{
@@ -404,7 +414,8 @@ router.post("/writeMessage", jsonParser, async(req,res)=>{
         "message": message,
         "date": dateMessage,
         "loginSender": session.message.loginSender,
-        "session.message": session.message.messageKey
+        "messageKeyM": session.message.messageKey,
+        "messageIVM": session.message.IV
     })
     //Оновлення БД
     userRecipient.save()
