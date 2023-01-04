@@ -25,47 +25,106 @@ function getIV(key) {
 (async function () {
     console.log(document.cookie)
 
-//масив где храниться HTML код с указаними письмами для вывода 
-let boxInner = new Array()
-//Сохраняем силку на HTML блок
-let box = document.querySelector('#messagesList')
+    //масив где храниться HTML код с указаними письмами для вывода 
+    let boxInner = new Array()
+    //Сохраняем силку на HTML блок
+    let box = document.querySelector('#messagesList')
 
-let xhr = new XMLHttpRequest();
+    //дані сесії на кліенте
+    let session = JSON.parse(sessionStorage.getItem("session"))
+    let login = sessionStorage.getItem("Login")
+    console.log(session)
+    let sessionKey = adaptationAES(session.sessionKey,session.sessionKey.data.length)
+    let sessionIV = adaptationAES(session.IV,session.IV.data.length)
+    console.log(sessionKey,sessionIV)
 
-xhr.open("GET", '/main', true);
+    login = eccryptoJS.utf8ToBuffer(login);
+    login = await eccryptoJS.aesCbcEncrypt(sessionIV, sessionKey, login);
+    console.log(login)
 
-xhr.onload = function () {
-    if (xhr.status !== 200) {
-        return;
-    }
-    const response = JSON.parse(xhr.response);
-    console.log(response)
-    //Вывод всех писем
-    for (let i = 0; i < response.length; i++) {
-    boxInner[i] = 
-        `
-        <div class="">
-            <div class="d-flex">
-                <h6 class='my-1'>
-                    Username: ${response[i]}
-                </h6>
-                <button onclick="deleteUser(this)" id="button${i}" class="btn btn-primary delete">Delete</button>
+    let data = JSON.stringify({
+        "login": login,
+        "id": session.id
+    })
+
+    let getParameter = new XMLHttpRequest()
+        getParameter.open('POST', "/getParameter", true)
+        getParameter.setRequestHeader('Content-Type', 'application/json')
+        getParameter.addEventListener("load", async function () {
+            let parameters = JSON.parse(getParameter.response)
+            console.log(parameters);
+
+            //Дешифрування параметрів повідомлень
+            parameters = adaptationAES(parameters, parameters.data.length)
+            //console.log(messagePublicKeyServer)
+            parameters = await eccryptoJS.aesCbcDecrypt(sessionIV, sessionKey, parameters);
+            
+            parameters = JSON.parse(parameters.toString())
+            console.log(parameters)
+
+            for (let i = 0; i < parameters.length; i++) {
+            boxInner[i] = 
+                `
+                <div class="" onclick="openMessage(this)" id="m${i}">
+                    <div class="d-flex">
+                        <h6 class='my-1'>
+                            Username: ${parameters[i].loginSender} ${parameters[i].date}
+                        </h6>
+                        <button onclick="deleteUser(this)" id="button${i}" class="btn btn-primary delete">Delete</button>
+                        
+                    </div>
+                </div>
+                `
+            }  
+            //Размещение в блок
+            box.innerHTML = boxInner.join('')
+
+        })
+
+    getParameter.send(data);
+
+// let xhr = new XMLHttpRequest();
+// xhr.open("GET", '/main', true);
+// xhr.onload = function () {
+//     if (xhr.status !== 200) {
+//         return;
+//     }
+//     const response = JSON.parse(xhr.response);
+//     console.log(response)
+//     //Вывод всех писем
+//     for (let i = 0; i < response.length; i++) {
+//     boxInner[i] = 
+//         `
+//         <div class="">
+//             <div class="d-flex">
+//                 <h6 class='my-1'>
+//                     Username: ${response[i]}
+//                 </h6>
+//                 <button onclick="deleteUser(this)" id="button${i}" class="btn btn-primary delete">Delete</button>
                 
-            </div>
-        </div>
-        `
-    }  
-    //Размещение в блок
-    box.innerHTML = boxInner.join('')
-}
-
-xhr.send();
+//             </div>
+//         </div>
+//         `
+//     }  
+//     //Размещение в блок
+//     box.innerHTML = boxInner.join('')
+// }
+// xhr.send();
 }())
 
-console.log(1232323)
+function openMessage(mesangeDiv) {
+    console.log(mesangeDiv.id)
+    let mesangeId = mesangeDiv.id.split('');
+    mesangeId = mesangeId[1];
+    console.log(mesangeId)
+
+    //генерація ключей повідомлення повідомлення
+    let messageKey = eccryptoJS.generateKeyPair();
+    let messagePublicKey = messageKey.publicKey;
+}
 
 async function writeMessage() {
-    //дані сесиї на кліенте
+    //дані сесії на кліенте
     let session = JSON.parse(sessionStorage.getItem("session"))
     let login = sessionStorage.getItem("Login")
     console.log(session)
@@ -99,6 +158,7 @@ async function writeMessage() {
     // messagePublicKey = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, messagePublicKey);
     // console.log(login,password)
 
+    //Шифрування сеансовими ключаси дані для узгодженн ключа повідомлення
     data = eccryptoJS.utf8ToBuffer(data);
     data = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, data);
     console.log(data)
