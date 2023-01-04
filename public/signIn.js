@@ -84,23 +84,26 @@ async function signIn() {
     let sessionKey = adaptationAES(session.sessionKey,32)
     let IV = adaptationAES(session.IV,16)
 
-    //console.log(sessionKey,IV)
+    sessionStorage.setItem(`Login`, login);
+    sessionStorage.setItem(`Password`, password);
 
+    //console.log(sessionKey,IV)
+    //Шифрування логіна та пароля 
     login = eccryptoJS.utf8ToBuffer(login);
     login = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, login);
     password = eccryptoJS.utf8ToBuffer(password);
     password = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, password);
     console.log(login,password)
 
-    //Запис логіну та паролю
-    sessionStorage.setItem(`Login`, JSON.stringify(login));
-    sessionStorage.setItem(`Password`, JSON.stringify(password));
+    //Запис логіну та паролю в форматі JSON
+    // sessionStorage.setItem(`Login`, JSON.stringify(login));
+    // sessionStorage.setItem(`Password`, JSON.stringify(password));
 
     console.log(login,password)
 
     let data = {
-        "login": sessionStorage.getItem("Login"),
-        "password": sessionStorage.getItem("Password"),
+        "login": login,
+        "password": password,
         "id": session.id
         };
     let dataJSON = JSON.stringify(data)
@@ -114,6 +117,21 @@ async function signIn() {
     xhr.addEventListener("load", function () {
         let answer = JSON.parse(xhr.response)
         console.log(answer)
+        let feetback = document.querySelector('#feetback');
+        switch (answer.answer) {
+            case 0:
+                feetback.innerHTML = "This Login is not have"
+                break;
+            case 1:
+                window.location.href = "/main";
+                break;
+            case 2:
+                feetback.innerHTML = "Password is not verification"
+                break;
+        
+            default:
+                break;
+        }
     })
 
     xhr.send(dataJSON);

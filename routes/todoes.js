@@ -6,6 +6,8 @@ const router = Router();
 const cookieParser = require('cookie-parser');
 const eccryptoJS = require("eccrypto-js");
 const express = require("express");
+const date = require('date-and-time')
+//const mongoose = require('mongoose');
 
 router.use(cookieParser())
 
@@ -67,31 +69,31 @@ router.get('/main/exit', (req,res)=>{
     res.redirect('/')
 })
 
-router.get('/main', async (req,res)=>{
-    //Загрузка базы даних пользователей
-    const users = await User.find({}).lean();
-    let user = {}
+// router.get('/main', async (req,res)=>{
+//     //Загрузка базы даних пользователей
+//     const users = await User.find({}).lean();
+//     let user = {}
 
-    console.log(req.cookies)
-    //Проверка введёного логина и пороля
-    for (let i = 0; i < users.length; i++) {
-        //Поиск указаного логина
-        if (users[i].login == req.cookies.Login) {
-            //Сверение паролей
-            if (req.cookies.Password == users[i].password) {
-                //res.redirect('/main');
-                user = users[i].messages;
-                return res.json(user);
-            }else{
-                break
-            }
-        }        
-    }
-    res.render('index',{
-        title: 'Sign Up',
-        answer: 'Please sigin up'
-    })
-})
+//     console.log(req.cookies)
+//     //Проверка введёного логина и пороля
+//     for (let i = 0; i < users.length; i++) {
+//         //Поиск указаного логина
+//         if (users[i].login == req.cookies.Login) {
+//             //Сверение паролей
+//             if (req.cookies.Password == users[i].password) {
+//                 //res.redirect('/main');
+//                 user = users[i].messages;
+//                 return res.json(user);
+//             }else{
+//                 break
+//             }
+//         }        
+//     }
+//     res.render('index',{
+//         title: 'Sign Up',
+//         answer: 'Please sigin up'
+//     })
+// })
 
 // Geter of Sign Up
 router.get('/signUp', (req,res)=>{
@@ -101,12 +103,12 @@ router.get('/signUp', (req,res)=>{
     })
 })
 
-// //Geter of MAIN page
-// router.get('/main', async (req,res)=>{
-//     res.render('main',{
-//         title: 'CryWEB',
-//     })
-// })
+//Geter of MAIN page
+router.get('/main', async (req,res)=>{
+    res.render('main',{
+        title: 'CryWEB',
+    })
+})
 
 router.post('/create',async(req,res)=>{
     const todo = new Todo({
@@ -162,7 +164,8 @@ router.post("/exchageSessionKey", jsonParser, async(req,res)=>{
         sessionPublicKey: JSON.stringify(sessionKey.publicKey),
         sessionPublicKeyUser:  JSON.stringify(sessionPublicKeyUser.publicKey),
         sessionKey:  JSON.stringify(sharedKey),
-        IV:  JSON.stringify(IV)
+        IV:  JSON.stringify(IV),
+        message: {"www": 2}
     })
     await session.save()
     console.log("session.id",session.id)
@@ -177,11 +180,91 @@ router.post("/exchageSessionKey", jsonParser, async(req,res)=>{
 
 
 // Poster для записи сообщения в базу даних
-router.post("/write",async(req,res)=>{
+router.post("/write", jsonParser, async(req,res)=>{
+
+    //Отримання id та зашифроване повідомлення
+    let primeData = req.body;
+    let id = primeData.id;
+    console.log(id)
+    let session = await Session.findById(id);
+    let data = adaptationAES(primeData.data,primeData.data.data.length)
+
+    //Форматування сеансового ключа
+    let sessionKey = adaptationAES(JSON.parse(session.sessionKey),32);
+    let IV = adaptationAES(JSON.parse(session.IV), 16);
+
+    //Дешифрування даних з клієнта
+    data = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, data);
+    //Трансформація бітів у строку, та потім у обькт з даними
+    data = JSON.parse(data.toString())
+    console.log(data);
+
+    //Запит даних отримувача та відправника
+    let userRecipient = await User.findOne({login: `${data.recipient}`});
+    console.log(userRecipient)
+    if (userRecipient == null) {
+        res.json(1)
+        return;
+    }
+
+    let userSender = await User.findOne({login: `${data.login}`});
+
+    //Генерація ключей повідомлення сервера
+    let messageKey = eccryptoJS.generateKeyPair();
+    let messagePublicKeyUser = adaptationAES(data.messagePublicKeyUser,data.messagePublicKeyUser.data.length)
+
+
+    //Узгодження ключів повідомленя
+    let messageSharedKey = await eccryptoJS.derive(
+        messageKey.privateKey,
+        messagePublicKeyUser
+    );
+
+    // Отримання IV
+    let messageIV = getIV(messageKey.publicKey)
+
+    //Запис тимчасових даних повідомлення
+    session.message = {
+        "messagePrivateKey": JSON.stringify(messageKey.privateKey),
+        "messagePublicKey": JSON.stringify(messageKey.publicKey),
+        "messagePublicKeyUser":  JSON.stringify(data.messagePublicKeyUser),
+        "messageKey":  JSON.stringify(messageSharedKey),
+        "IV":  JSON.stringify(messageIV),
+        "PublicKeySender": userSender.publicKey,
+        "loginRecipient": userRecipient.login,
+        "loginSender": userSender.login
+    }
+    await session.save()
+
+    // обьект для відправки з ВК повідомлення сервера та ВК отримувача
+    let sendData = {
+        "messagePublicKeyServer": messageKey.publicKey,
+        "UserPublicKey": {
+            "PublicKeyRecipient": userRecipient.publicKey,
+            "PublicKeySender":userSender.publicKey
+        }
+    }
+
+
+    //console.log(sessionKey,IV)
+    //Шифрування ВК севреар повідомлення сеасовим ключем 
+    sendData.messagePublicKeyServer = eccryptoJS.utf8ToBuffer(sendData.messagePublicKeyServer);
+    sendData.messagePublicKeyServer = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, sendData.messagePublicKeyServer);
+    //Шифрування ВК отримувача ключем повідомлення
+    sendData.UserPublicKey = eccryptoJS.utf8ToBuffer(JSON.stringify(sendData.UserPublicKey));
+    sendData.UserPublicKey = await eccryptoJS.aesCbcEncrypt(messageIV, messageSharedKey, sendData.UserPublicKey);
+    // sendData.PublicKeyRecipient = eccryptoJS.utf8ToBuffer(sendData.PublicKeyRecipient);
+    // sendData.PublicKeyRecipient = await eccryptoJS.aesCbcEncrypt(messageIV, messageSharedKey, sendData.PublicKeyRecipient);
+    //console.log(login,password)
+
+    //Відпрвка обькта з зашифрованими даними
+    res.json(sendData)
+    return;
+///////////////////////////////////////
     // даные из input где логин получателя
     let recipient = req.body.recipient
     // Запрос по логину 
-    const user = await User.findOne({login: `${recipient}`});
+    //const user = await User.findOne({login: `${recipient}`});
     //даные из тексотвой области
     let text = req.body.textarea;
     console.log(user,"FIRST");
@@ -194,6 +277,46 @@ router.post("/write",async(req,res)=>{
         user
     })
     // res.redirect('/main');
+})
+
+router.post("/writeMessage", jsonParser, async(req,res)=>{
+
+    //Отримання id та зашифроване повідомлення
+    let primeData = req.body;
+    let id = primeData.id;
+    console.log(id)
+    //Отриманння даних сессії
+    let session = await Session.findById(id);
+    //let message = adaptationAES(primeData.message,primeData.message.data.length)
+    let message = primeData.message;
+    console.log(message)
+
+    //Отримання даних отримувача
+    let userRecipient = await User.findOne({login: `${session.message.loginRecipient}`});
+    userRecipient = await User.findById(userRecipient.id)
+    //Дата запису повідомлення
+    let dateMessage = new Date();
+    dateMessage = date.format(dateMessage,'YYYY/MM/DD HH:mm:ss')
+
+    //Запис повідомлення до масиву повідомлень отримувача
+    userRecipient.messages.push({
+        "message": message,
+        "date ": dateMessage,
+        "loginSender": session.message.loginSender,
+        "session.message": session.message.messageKey
+    })
+    //Оновлення БД
+    userRecipient.save()
+    session.message = {}
+    session.save()
+
+    res.json(
+        // "userRecipient": userRecipient,
+        // "session": session,
+        // "date": dateMessage,
+        // "userRecipient.messages": userRecipient.messages
+        "message write to BasaData"
+    )
 })
 
 // const jsonParser = express.json()
@@ -251,19 +374,23 @@ router.post('/signIn', jsonParser, async(req,res)=>{
     const users = await User.find({}).lean();
     let id = req.body.id;
     console.log(id);
+    //Пошук сеансу по id
     const session = await Session.findOne({ _id: id }).lean();
     console.log(session);
     //console.log(users);
     console.log(req.body);
-    let login = JSON.parse(req.body.login);
+    //Парсим та приводимо до форми для дешифрування логін та пароль
+    let login = req.body.login;
     login = adaptationAES(login,login.data.length)
-    let password = JSON.parse(req.body.password);
+    let password = req.body.password;
     password = adaptationAES(password,password.data.length)
     console.log(session.sessionKey);
 
+    //Парсим та приводимо до форми для дешифрування ключ сесії
     let sessionKey = adaptationAES(JSON.parse(session.sessionKey),32);
     let IV = adaptationAES(JSON.parse(session.IV), 16);
 
+    //Дешифрування
     login = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, login);
     password = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, password);
     console.log(login.toString(),password.toString());

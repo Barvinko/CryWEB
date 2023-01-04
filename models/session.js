@@ -19,6 +19,9 @@ const schema = new Schema({
     },
     IV:{
         type: Object,
+    },
+    message:{
+        type: Object
     }
 })
 

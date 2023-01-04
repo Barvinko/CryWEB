@@ -1,3 +1,46 @@
+<style>
+.navbar-expand-lg .navbar-nav {
+    flex-direction: row;
+}
+.mb-lg-0 {
+    margin-bottom: 0!important;
+}
+</style>
+
+<nav class="navbar navbar-expand-lg bg-light">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">Todos</a>
+    {{!-- <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button> --}}
+    {{!-- <div class=" navbar-collapse" id="navbarSupportedContent"> --}}
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item me-2">
+          {{!-- {{#if isIndex}} --}}
+          <a class="nav-link" aria-current="page" href="/">Write</a>
+          {{!-- {{else}}
+          <a class="nav-link" aria-current="page" href="/">Todos</a>
+          {{/if}}
+        </li> --}}
+        <li class="nav-item">
+          {{!-- {{#if isCreate}} --}}
+          <a class="nav-link" href="/create">EXIT</a>
+          {{!-- {{else}}
+          <a class="nav-link" href="/create">Create</a>
+          {{/if}} --}}
+        </li>
+        {{!-- <li class="nav-item">
+          <a class="nav-link">Disabled</a>
+        </li> --}}
+      </ul>
+      <form class="d-flex" role="search">
+        <input class="form-control me-2" type="search" placeholder="Private key" aria-label="Search">
+        {{!-- <button class="btn btn-outline-success" type="submit">Private key</button> --}}
+      </form>
+    {{!-- </div> --}}
+  </div>
+</nav>
+
     <div class="container w-75">
         <header class="border-bootem">
             <form action="/main/exit" method="get">
@@ -8,17 +51,15 @@
             <div id="messagesList">
 
             </div>
-            <form action="/write" method="POST">
                 <div class="form-floating mb-3">
-                    <input type="text" class="form-control" name="recipient" placeholder="Login">
-                    <label for="floatingInput">Login of recipient</label>
+                    <input type="text" class="form-control" id="recipient" name="recipient" placeholder="Login">
+                    <label for="recipient">Login of recipient</label>
                 </div>
                 <div class="form-floating">
-                    <textarea class="form-control" name="textarea" placeholder="Leave a comment here" id="floatingTextarea2" style="height: 30vh"></textarea>
-                    <label for="floatingTextarea2">Message</label>
+                    <textarea class="form-control" name="textarea" placeholder="Leave a comment here" id="textarea" style="height: 30vh"></textarea>
+                    <label for="textarea">Message</label>
                 </div>
-                <button class="btn btn-primary mt-3" type="submit">Send</button>
-            </form>
+                <button class="btn btn-primary mt-3" onclick="writeMessage()">Send</button>
         </main>
 
         <script defer src="./main.js"></script>
