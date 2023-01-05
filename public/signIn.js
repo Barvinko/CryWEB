@@ -1,15 +1,23 @@
+// function adaptationPublicKey(key) {
+//     let sessionPublicKeyUser = eccryptoJS.generateKeyPair();
+//     for (let i = 0; i < sessionPublicKeyUser.publicKey.length; i++) {
+//         sessionPublicKeyUser.publicKey[i] = key.data[i]
+//     }
+//     return sessionPublicKeyUser
+// }
 function adaptationPublicKey(key) {
-    let sessionPublicKeyUser = eccryptoJS.generateKeyPair();
-    for (let i = 0; i < sessionPublicKeyUser.publicKey.length; i++) {
-        sessionPublicKeyUser.publicKey[i] = key.data[i]
-    }
-    return sessionPublicKeyUser
+    let AESkey = new Uint8Array(key.data)
+    return AESkey
 }
+// function adaptationAES(key,bit) {
+//     let AESkey = eccryptoJS.randomBytes(bit);
+//     for (let i = 0; i < AESkey.length; i++) {
+//         AESkey[i] = key.data[i]
+//     }
+//     return AESkey
+// }
 function adaptationAES(key,bit) {
-    let AESkey = eccryptoJS.randomBytes(bit);
-    for (let i = 0; i < AESkey.length; i++) {
-        AESkey[i] = key.data[i]
-    }
+    let AESkey = new Uint8Array(key.data)
     return AESkey
 }
 

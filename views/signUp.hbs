@@ -1,16 +1,45 @@
 <script defer src="./signUp.js"></script>
 
-<div class="container w-75">
+<style>
+    *{
+        box-sizing: border-box;
+    }
+    .signUp{
+        width: 275px;
+        margin-top: 10vh;
+        border: 2px solid rgba(0, 0, 0, 0.387);
+        border-radius: 25px;
+    }
+
+    .signUp button{
+        width: 91px;
+    }
+</style>
+
+<nav class="navbar navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">CryWEB</a>
+  </div>
+</nav>
+
+<div class="container d-flex justify-content-center">
     {{!-- <form action="signUp" method="POST"> --}}
+    <main class="signUp text-center p-3" id="mainSiginUp">
+        <h1>SiginUp</h1>
         <div class="form-floating mb-3">
-        <input type="text" class="form-control" id="login" name="login" placeholder="Login">
-        <label for="floatingInput">Login</label>
+            <input type="text" class="form-control" id="login" name="login" placeholder="Login">
+            <label for="floatingInput">Login</label>
+        </div>
+        <div class="form-floating mb-3">
+            <input type="password" class="form-control" id="password" name="password" placeholder="Password">
+            <label for="floatingPassword">Password</label>
         </div>
         <div class="form-floating">
-        <input type="password" class="form-control" id="password" name="password" placeholder="Password">
-        <label for="floatingPassword">Password</label>
+            <input type="password" class="form-control" id="repeatPassword" name="password" placeholder="Password check">
+            <label for="floatingPassword">Repeat password</label>
         </div>
-        <button class="btn btn-primary mt-3" onclick="registration()">SIGN UP</button>
+        <button class="btn btn-dark mt-4" onclick="registration()">SIGN UP</button>
     {{!-- </form> --}}
-        <div id="key"></div>
+    </main>
+    <div id="key"></div>
 </div>

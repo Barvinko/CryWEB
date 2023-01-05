@@ -19,18 +19,27 @@ function getIV(key) {
     return iv;
 }
 
+// function adaptationPublicKey(key) {
+//     let sessionPublicKeyUser = eccryptoJS.generateKeyPair();
+//     for (let i = 0; i < sessionPublicKeyUser.publicKey.length; i++) {
+//         sessionPublicKeyUser.publicKey[i] = key.data[i]
+//     }
+//     return sessionPublicKeyUser
+// }
 function adaptationPublicKey(key) {
-    let sessionPublicKeyUser = eccryptoJS.generateKeyPair();
-    for (let i = 0; i < sessionPublicKeyUser.publicKey.length; i++) {
-        sessionPublicKeyUser.publicKey[i] = key.data[i]
-    }
-    return sessionPublicKeyUser
+    let AESkey = new Uint8Array(key.data)
+    return AESkey
 }
+// function adaptationAES(key,bit) {
+//     let AESkey = eccryptoJS.randomBytes(bit);
+//     for (let i = 0; i < AESkey.length; i++) {
+//         AESkey[i] = key.data[i]
+//     }
+//     return AESkey
+// }
+
 function adaptationAES(key,bit) {
-    let AESkey = eccryptoJS.randomBytes(bit);
-    for (let i = 0; i < AESkey.length; i++) {
-        AESkey[i] = key.data[i]
-    }
+    let AESkey = new Uint8Array(key.data)
     return AESkey
 }
 
@@ -38,7 +47,7 @@ const jsonParser = express.json()
 
 router.get('/', jsonParser, async (req,res)=>{
     //lean()для роботы HBS 
-    const todos = await Todo.find().lean()
+    //const todos = await Todo.find().lean()
     //let arrData = JSON.parse(todos);
     // for (const iterator of todos) {
     //     arrData.push(iterator)
@@ -46,10 +55,10 @@ router.get('/', jsonParser, async (req,res)=>{
     // console.log(typeof(todos))
     res.render('index',{
         //Кофигурацыи для HBS
-        title:'Todos list',
-        //для отброжение активності в навбаре
-        isIndex: true,
-        todos,
+        // title:'Todos list',
+        // //для отброжение активності в навбаре
+        // isIndex: true,
+        // todos,
        // arrData
     })
 })
@@ -289,6 +298,38 @@ router.post("/exchageSessionKey", jsonParser, async(req,res)=>{
     })
 })
 
+router.post("/deleteMessage", jsonParser, async(req,res)=>{
+
+    //Отримання id та зашифроване повідомлення
+    let primeData = req.body;
+    let id = primeData.id;
+    console.log(id)
+    let session = await Session.findById(id);
+    let data = adaptationAES(primeData.data)
+
+    //Форматування сеансового ключа
+    let sessionKey = adaptationAES(JSON.parse(session.sessionKey),32);
+    let IV = adaptationAES(JSON.parse(session.IV), 16);
+
+    //Дешифрування даних з клієнта
+    data = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, data);
+    //Трансформація бітів у строку, та потім у обькт з даними
+    data = JSON.parse(data.toString())
+    console.log(data);
+    console.log(data.login);
+
+    //Запит даних власника повідомлень
+    let userRecipient = await User.findOne({login: `${data.login}`});
+    //console.log(userRecipient);
+    let userId = userRecipient.id;
+    //console.log(userId.id);
+    userRecipient = await User.findById(userId);
+    
+    userRecipient.messages.splice(data.messageId,data.messageId + 1)
+    userRecipient.save()
+    res.json(userRecipient)
+})
+
 
 
 // Poster для записи сообщения в базу даних
@@ -393,7 +434,7 @@ router.post("/writeMessage", jsonParser, async(req,res)=>{
     dateMessage = date.format(dateMessage,'YYYY/MM/DD HH:mm:ss')
 
     //Запис повідомлення до масиву повідомлень отримувача
-    userRecipient.messages.push({
+    userRecipient.messages.unshift({
         "message": message,
         "date": dateMessage,
         "loginSender": session.message.loginSender,

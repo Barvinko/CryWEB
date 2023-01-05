@@ -1,9 +1,17 @@
+// function adaptationAES(key,bit) {
+//     let AESkey = eccryptoJS.randomBytes(bit);
+//     for (let i = 0; i < AESkey.length; i++) {
+//         AESkey[i] = key.data[i]
+//     }
+//     return AESkey
+// }
 function adaptationAES(key,bit) {
-    let AESkey = eccryptoJS.randomBytes(bit);
-    for (let i = 0; i < AESkey.length; i++) {
-        AESkey[i] = key.data[i]
-    }
+    let AESkey = new Uint8Array(key.data)
     return AESkey
+}
+
+function backSiginIn() {
+    window.location.href = "/";
 }
 
 async function registration(){
@@ -12,7 +20,12 @@ async function registration(){
 
     let login = document.querySelector('#login').value;
     let password = document.querySelector('#password').value;
+    let repeatPassword = document.querySelector('#repeatPassword').value;
     console.log(login,password)
+
+    if (repeatPassword != password) {
+        return
+    }
 
     //Хешування паролю
     password = eccryptoJS.utf8ToBuffer(password);
@@ -71,11 +84,22 @@ async function registration(){
 
             let publicKey = keyClient.publicKey.join(' ')
 
-            let giveKey = document.querySelector(`#key`)
-            giveKey.innerHTML = `
-                <div>Private Key: ${privateKey}</div>
-                <div>Public Key: ${publicKey} </div>
+            let mainSiginUp = document.querySelector('#mainSiginUp');
+            let tempInner = mainSiginUp.innerHTML;
+
+            mainSiginUp.innerHTML = `
+                <h3>Private Key</h3>
+                <div>${privateKey}</div>
+                <h3>Public Key</h3>
+                <div>${publicKey} </div>
+                <button class="btn btn-dark mt-4" onclick="backSiginIn()">BACK</button>
             `
+
+            // let giveKey = document.querySelector(`#key`)
+            // giveKey.innerHTML = `
+            //     <div>Private Key: ${privateKey}</div>
+            //     <div>Public Key: ${publicKey} </div>
+            // `
         }
     })
 

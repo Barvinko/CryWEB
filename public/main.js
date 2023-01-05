@@ -7,12 +7,16 @@
 //        }
 
 function adaptationAES(key,bit) {
-    let AESkey = eccryptoJS.randomBytes(bit);
-    for (let i = 0; i < AESkey.length; i++) {
-        AESkey[i] = key.data[i]
-    }
+    let AESkey = new Uint8Array(key.data)
     return AESkey
 }
+// function adaptationAES(key,bit) {
+//     let AESkey = eccryptoJS.randomBytes(bit);
+//     for (let i = 0; i < AESkey.length; i++) {
+//         AESkey[i] = key.data[i]
+//     }
+//     return AESkey
+// }
 
 function getIV(key) {
     let iv = eccryptoJS.randomBytes(16);
@@ -22,7 +26,9 @@ function getIV(key) {
     return iv;
 }
 
-(async function () {
+
+
+async function getParameter() {
     console.log(document.cookie)
 
     //масив где храниться HTML код с указаними письмами для вывода 
@@ -65,12 +71,14 @@ function getIV(key) {
             for (let i = 0; i < parameters.length; i++) {
             boxInner[i] = 
                 `
-                <div class="" onclick="openMessage(this)" id="m${i}">
-                    <div class="d-flex">
-                        <h6 class='my-1'>
-                            Username: ${parameters[i].loginSender} ${parameters[i].date}
-                        </h6>
-                        <button onclick="deleteUser(this)" id="button${i}" class="btn btn-primary delete">Delete</button>
+                <div class="">
+                    <div class="d-flex justify-content-between">
+                        <div class="flex-grow-1" onclick="openMessage(this)" name="${parameters[i].loginSender} ${parameters[i].date}" id="m${i}">
+                            <h6 class='pt-2'>
+                                Sender: ${parameters[i].loginSender} ${parameters[i].date}
+                            </h6>
+                        </div>
+                        <button onclick="deleteUser(this)" id="button${i}" class="btn btn-dark delete">Delete</button>
                         
                     </div>
                 </div>
@@ -82,35 +90,59 @@ function getIV(key) {
         })
 
     getParameter.send(data);
+}
 
-// let xhr = new XMLHttpRequest();
-// xhr.open("GET", '/main', true);
-// xhr.onload = function () {
-//     if (xhr.status !== 200) {
-//         return;
-//     }
-//     const response = JSON.parse(xhr.response);
-//     console.log(response)
-//     //Вывод всех писем
-//     for (let i = 0; i < response.length; i++) {
-//     boxInner[i] = 
-//         `
-//         <div class="">
-//             <div class="d-flex">
-//                 <h6 class='my-1'>
-//                     Username: ${response[i]}
-//                 </h6>
-//                 <button onclick="deleteUser(this)" id="button${i}" class="btn btn-primary delete">Delete</button>
-                
-//             </div>
-//         </div>
-//         `
-//     }  
-//     //Размещение в блок
-//     box.innerHTML = boxInner.join('')
-// }
-// xhr.send();
-}())
+getParameter()
+
+let secList = document.querySelector("#secList")
+let secRead = document.querySelector("#secRead")
+let secWrite = document.querySelector("#secWrite")
+
+async function deleteUser(button) {
+    console.log(button.id)
+    let mesangeId = button.id.split('');
+    mesangeId = mesangeId[6];
+    console.log(mesangeId)
+
+    let session = JSON.parse(sessionStorage.getItem("session"))
+    let login = sessionStorage.getItem("Login")
+    console.log(session)
+
+    let sessionKey = adaptationAES(session.sessionKey,32);
+    let sessionIV = adaptationAES(session.IV,16);
+    let sessionId = session.id;
+
+    let data = {
+        'login': login,
+        'messageId': mesangeId,
+    }
+
+    console.log(data)
+
+    data = JSON.stringify(data);
+    console.log(data)
+
+    //Шифрування сеансовими ключаси дані для узгодженн ключа повідомлення
+    data = eccryptoJS.utf8ToBuffer(data);
+    data = await eccryptoJS.aesCbcEncrypt(sessionIV, sessionKey, data);
+    console.log(data)
+    data = JSON.stringify({
+        'id': sessionId,
+        'data': data
+    })
+
+    //POST запрос лля відправки та запису повідомлення на сервері
+    let deleteMessage = new XMLHttpRequest()
+    deleteMessage.open('POST', "/deleteMessage", true)
+    deleteMessage.setRequestHeader('Content-Type', 'application/json')
+    deleteMessage.addEventListener("load", async function () {
+        let answer = JSON.parse(deleteMessage.response)
+        console.log(answer);
+        getParameter()        
+    })
+
+    deleteMessage.send(data);
+}
 
 async function openMessage(mesangeDiv) {
     console.log(mesangeDiv.id)
@@ -208,7 +240,7 @@ async function openMessage(mesangeDiv) {
         PublicKeySender = adaptationAES(PublicKeySender, PublicKeySender.data.length)
 
         //Приведення веденного таємного ключа користовуча
-        let sender = '4a fd 6d 93 27 2f 48 9e 13 e1 da 6e 46 ea ca ec 48 a5 95 b6 8e 0c 85 84 95 7d f4 7c 59 4a 9d 23'
+        let sender = document.querySelector('#privateKey').value
         sender = sender.split(' ').join('');
         sender = sender.split('');
         console.log(sender)
@@ -220,6 +252,8 @@ async function openMessage(mesangeDiv) {
             senderPrivateKey[i] = temp
             
         }
+
+        console.log("PublicKeySender",PublicKeySender)
 
         //Узгодження ключа користувачів
         let UserSharedKey = await eccryptoJS.derive(
@@ -240,10 +274,38 @@ async function openMessage(mesangeDiv) {
         //Дешифрування повідомлення
         let openMessage = await eccryptoJS.aesCbcDecrypt(userIV, UserSharedKey, message);
         console.log("ddd")
-        openMessage = openMessage.toString()
+        openMessage = JSON.parse(openMessage.toString())
         console.log(openMessage)
+
+        secRead.classList.remove('d-none')
+        secList.classList.add('d-none')
+
+        let title = document.querySelector(`#${mesangeDiv.id} h6`)
+        title = title.innerHTML;
+
+        // let title = "hello how are you"
+        //let newTitle = `${title}`.split(' ')
+        //newTitle = newTitle.join('').split('').join('').split(':').slice(0)
+        //console.log(newTitle)
+
+        secRead.innerHTML = `
+            <div class='my-2'>
+                <button id='back-button' onclick = "backButton(secRead,secList)" class='btn-lg btn btn-dark'>
+                    <i class="fas fa-arrow-left"></i>
+                    Back To News List
+                </button>
+            </div>
+            <h3>${title}</h3>
+            <div>${openMessage}</div>
+        `
     })
     getMessage.send(data);
+}
+
+function backButton(close,open){
+    console.log("backButton")
+    close.classList.add('d-none')
+    open.classList.remove('d-none')
 }
 
 async function writeMessage() {
@@ -333,8 +395,8 @@ async function writeMessage() {
         let PublicKeyRecipient = adaptationAES(UserPublicKey.PublicKeyRecipient, UserPublicKey.PublicKeyRecipient.data.length)
         let PublicKeySender = UserPublicKey.PublicKeySender
 
-        //Перевід таємного ключа отримувача у бітовий формат
-        let sender = 'c1 af d1 a6 00 e7 13 f0 95 02 8e 8c 7d d2 60 17 ba 0b af b7 f5 6e 9a 4e 21 f8 62 6a eb ca df de'
+        //Перевід таємного ключа відправника у бітовий формат
+        let sender = document.querySelector('#privateKey').value;
         sender = sender.split(' ').join('');
         sender = sender.split('');
         console.log(sender)
