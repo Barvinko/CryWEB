@@ -1,5 +1,5 @@
 const {Router} = require('express')
-const Todo = require('../models/Todo');
+// const Todo = require('../models/Todo');
 const User = require('../models/user');
 const Session = require('../models/session');
 const router = Router();
@@ -63,12 +63,12 @@ router.get('/', jsonParser, async (req,res)=>{
     })
 })
 
-router.get('/create', (req,res)=>{
-    res.render('create',{
-        title: 'Create todo',
-        isCreate: true
-    })
-})
+// router.get('/create', (req,res)=>{
+//     res.render('create',{
+//         title: 'Create todo',
+//         isCreate: true
+//     })
+// })
 
 router.get('/main/exit', (req,res)=>{
     console.log("WORK")
@@ -119,24 +119,24 @@ router.get('/main', async (req,res)=>{
     })
 })
 
-router.post('/create',async(req,res)=>{
-    const todo = new Todo({
-        //название input
-        title: req.body.title
-    })
-    console.log(todo)
-    //wait save
-    await todo.save()
-    //указывает куда перейти
-    res.redirect('/')
-})
+// router.post('/create',async(req,res)=>{
+//     const todo = new Todo({
+//         //название input
+//         title: req.body.title
+//     })
+//     console.log(todo)
+//     //wait save
+//     await todo.save()
+//     //указывает куда перейти
+//     res.redirect('/')
+// })
 
-router.post("/complete",async(req,res)=>{
-    const todo = await Todo.findById(req.body.id);
-    todo.completed = !!req.body.completed;
-    await todo.save()
-    res.redirect('/');
-})
+// router.post("/complete",async(req,res)=>{
+//     const todo = await Todo.findById(req.body.id);
+//     todo.completed = !!req.body.completed;
+//     await todo.save()
+//     res.redirect('/');
+// })
 
 router.post("/getParameter", jsonParser, async(req,res)=>{
 
