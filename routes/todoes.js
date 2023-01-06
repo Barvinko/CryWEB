@@ -219,6 +219,7 @@ router.post("/getMessage", jsonParser, async(req,res)=>{
     let message = userRecipient.messages[parseInt(data.messageId)].message;
     let messageKeyM = userRecipient.messages[parseInt(data.messageId)].messageKeyM;
     let messageIVM = userRecipient.messages[parseInt(data.messageId)].messageIVM;
+    let messageSig = userRecipient.messages[parseInt(data.messageId)].messageSig;
     let recipientPublicKey = userRecipient.publicKey;
     //message = adaptationAES(JSON.parse(session.sessionKey),32);
     console.log(message);
@@ -230,7 +231,7 @@ router.post("/getMessage", jsonParser, async(req,res)=>{
     let dataSend = JSON.stringify({
         "messageKeyM": messageKeyM,
         "messageIVM": messageIVM,
-        "recipientPublicKey": recipientPublicKey
+        "recipientPublicKey": recipientPublicKey,
     })
 
     //Шифрування ключа повідомлення з бази данихб та відкритий ключ отримувача
@@ -241,7 +242,8 @@ router.post("/getMessage", jsonParser, async(req,res)=>{
     dataSend = {
         "messagePublicKeyServer": messagePublicKeyServer,
         "keys": dataSend,
-        "message": message
+        "message": message,
+        "messageSig": messageSig
     }
 
     // res.json({
@@ -325,14 +327,14 @@ router.post("/deleteMessage", jsonParser, async(req,res)=>{
     //console.log(userId.id);
     userRecipient = await User.findById(userId);
     
-    userRecipient.messages.splice(data.messageId,data.messageId + 1)
+    userRecipient.messages.splice(data.messageId,1)
     userRecipient.save()
     res.json(userRecipient)
 })
 
 
 
-// Poster для записи сообщения в базу даних
+// Poster для обміну ключами посилання
 router.post("/write", jsonParser, async(req,res)=>{
 
     //Отримання id та зашифроване повідомлення
@@ -439,7 +441,8 @@ router.post("/writeMessage", jsonParser, async(req,res)=>{
         "date": dateMessage,
         "loginSender": session.message.loginSender,
         "messageKeyM": session.message.messageKey,
-        "messageIVM": session.message.IV
+        "messageIVM": session.message.IV,
+        "messageSig": primeData.messageSig
     })
     //Оновлення БД
     userRecipient.save()

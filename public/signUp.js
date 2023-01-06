@@ -23,7 +23,9 @@ async function registration(){
     let repeatPassword = document.querySelector('#repeatPassword').value;
     console.log(login,password)
 
+    console.log(repeatPassword != password)
     if (repeatPassword != password) {
+        alert("пароли не одиноковы")
         return
     }
 

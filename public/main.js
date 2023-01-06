@@ -78,7 +78,9 @@ async function getParameter() {
                                 Sender: ${parameters[i].loginSender} ${parameters[i].date}
                             </h6>
                         </div>
-                        <button onclick="deleteUser(this)" id="button${i}" class="btn btn-dark delete">Delete</button>
+                        <button type="button" class="close" aria-label="Close" onclick="deleteUser(this)" id="button${i}">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                         
                     </div>
                 </div>
@@ -274,8 +276,20 @@ async function openMessage(mesangeDiv) {
         //Дешифрування повідомлення
         let openMessage = await eccryptoJS.aesCbcDecrypt(userIV, UserSharedKey, message);
         console.log("ddd")
-        openMessage = JSON.parse(openMessage.toString())
+        openMessage = openMessage.toString()
         console.log(openMessage)
+
+        let messageVerify = eccryptoJS.utf8ToBuffer(openMessage);
+        let messageHash = await eccryptoJS.sha256(messageVerify);
+        console.log(dataAnswer.messageSig)
+        let messageSig = adaptationAES(dataAnswer.messageSig)
+        let verify = await eccryptoJS.verify(PublicKeySender, messageHash, messageSig);
+        console.log(verify)
+        if (verify != null) {
+            alert("Do not spended verification");
+        }
+
+        openMessage = JSON.parse(openMessage)
 
         secRead.classList.remove('d-none')
         secList.classList.add('d-none')
@@ -423,15 +437,21 @@ async function writeMessage() {
         let userIV = getIV(PublicKeyRecipient);
 
         //Текст введений відправником
-        let text = document.querySelector("#textarea").value;
+        let text = document.querySelector("#textarea");
 
         //Перевід у JSON для подальшого шифрування
-        let message = JSON.stringify(text)
+        let message = JSON.stringify(text.value)
 
         //Шифрування ключем користувачів
         message = eccryptoJS.utf8ToBuffer(message);
+
+        console.log("good")
+        let usersHash = await eccryptoJS.sha256(message);
+        console.log("good")
+
         message = await eccryptoJS.aesCbcEncrypt(userIV, UserSharedKey, message);
 
+        
         //Дані для шифрування ключем повідомлення
         message = JSON.stringify({
             "message": message,
@@ -441,11 +461,15 @@ async function writeMessage() {
         //Шифрування ключем повідомлення
         message = eccryptoJS.utf8ToBuffer(message);
         message = await eccryptoJS.aesCbcEncrypt(messageIV, messageSharedKey, message);
-        console.log("good")
+        //console.log("good")
+
+        let usersSig = await eccryptoJS.sign(senderPrivateKey, usersHash);
+
         //Перевід у JSON для відправки на сервер
         message = JSON.stringify({
             "message": message,
             "id": id,
+            "messageSig": usersSig
         })
 
         //console.log(message);
@@ -457,6 +481,7 @@ async function writeMessage() {
         sendMessage.addEventListener("load", async function () {
             let answer2 = JSON.parse(sendMessage.response)
             console.log(answer2);
+            text.value = ""
         })
 
         sendMessage.send(message);
