@@ -68,6 +68,18 @@ async function getParameter() {
             parameters = JSON.parse(parameters.toString())
             console.log(parameters)
 
+            if (parameters.length == 0) {
+                secList.innerHTML = `
+                <div clas="text-center">
+                    <h1>No Message</h1>
+                </div>
+                `
+                secList.classList = "text-center"
+                return;
+            }else{
+                secList.classList = "secList"
+            }
+
             for (let i = 0; i < parameters.length; i++) {
             boxInner[i] = 
                 `
