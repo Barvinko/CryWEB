@@ -23,10 +23,10 @@ function adaptationAES(key,bit) {
 
 (async function () {
     //Перевірка наявності сеасових ключів
-    if (sessionStorage.getItem("session")) {
-        console.log("have")
-        return;
-    }
+    // if (sessionStorage.getItem("session")) {
+    //     console.log("have")
+    //     return;
+    // }
     
     console.log("nohave")
 

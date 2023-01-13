@@ -25,7 +25,7 @@ async function registration(){
 
     console.log(repeatPassword != password)
     if (repeatPassword != password) {
-        alert("пароли не одиноковы")
+        alert("Entered passwords are different")
         return
     }
 
@@ -68,8 +68,13 @@ async function registration(){
         let answer = JSON.parse(xhr.response)
         console.log(answer)
 
+        if (answer == false) {
+            console.log(answer == false)
+            alert("Another user with this login is already registered");
+            return;
+        }
+
         //Вивід ключів
-        if (answer.answer) {
             let privateKey = []
 
             for (let i = 0; i < keyClient.privateKey.length; i++) {
@@ -102,7 +107,6 @@ async function registration(){
             //     <div>Private Key: ${privateKey}</div>
             //     <div>Public Key: ${publicKey} </div>
             // `
-        }
     })
 
     xhr.send(data);
