@@ -1,19 +1,3 @@
-// function adaptationAES(key,bit) {
-//     let AESkey = eccryptoJS.randomBytes(bit);
-//     for (let i = 0; i < AESkey.length; i++) {
-//         AESkey[i] = key.data[i]
-//     }
-//     return AESkey
-// }
-function adaptationAES(key,bit) {
-    let AESkey = new Uint8Array(key.data)
-    return AESkey
-}
-
-function backSiginIn() {
-    window.location.href = "/";
-}
-
 async function registration(){
     let keyClient = eccryptoJS.generateKeyPair();
     console.log(keyClient);
@@ -23,19 +7,19 @@ async function registration(){
     let repeatPassword = document.querySelector('#repeatPassword').value;
     console.log(login,password)
 
-    console.log(repeatPassword != password)
+    //passwords identities are checked
     if (repeatPassword != password) {
         alert("Entered passwords are different")
-        return
+        return;
     }
 
-    //Хешування паролю
+    //Hashing the password
     password = eccryptoJS.utf8ToBuffer(password);
     password = await eccryptoJS.sha512(password);
     password = password.join('')
     console.log(login,password)
 
-    // дані для реєстрації
+    //data for registration
     let data = {
         "login": login,
         "password": password.toString(),
@@ -43,7 +27,7 @@ async function registration(){
         };
     data = JSON.stringify(data)
 
-    //дані сесії на кліенте
+    //session data on the client
     let session = JSON.parse(sessionStorage.getItem("session"))
     console.log(session)
 
@@ -59,11 +43,11 @@ async function registration(){
         "id": sessionId
     })
 
-    //Відправка даних  на сервер
+    //Sending data to the server
     let xhr = new XMLHttpRequest()
     xhr.open('POST', "/signUp", true)
     xhr.setRequestHeader('Content-Type', 'application/json')
-    //отримання відповіді
+    //receiving response
     xhr.addEventListener("load", function () {
         let answer = JSON.parse(xhr.response)
         console.log(answer)
@@ -74,7 +58,7 @@ async function registration(){
             return;
         }
 
-        //Вивід ключів
+        //Output keys
             let privateKey = []
 
             for (let i = 0; i < keyClient.privateKey.length; i++) {
@@ -101,12 +85,6 @@ async function registration(){
                 <div>${publicKey} </div>
                 <button class="btn btn-dark mt-4" onclick="backSiginIn()">BACK</button>
             `
-
-            // let giveKey = document.querySelector(`#key`)
-            // giveKey.innerHTML = `
-            //     <div>Private Key: ${privateKey}</div>
-            //     <div>Public Key: ${publicKey} </div>
-            // `
     })
 
     xhr.send(data);

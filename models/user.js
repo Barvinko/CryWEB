@@ -1,6 +1,6 @@
 const { Schema, model } = require('mongoose')
 
-//модель для базы даних
+//Model for database
 
 const schema = new Schema({
     login: {

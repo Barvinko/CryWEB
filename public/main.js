@@ -1,59 +1,43 @@
-//function exit(){
-//    let xhr = new XMLHttpRequest();
-//
-//              xhr.open("GET", '/main/exit', true);
-//
-//              xhr.send();
-//        }
-
-function adaptationAES(key,bit) {
-    let AESkey = new Uint8Array(key.data)
-    return AESkey
-}
-// function adaptationAES(key,bit) {
-//     let AESkey = eccryptoJS.randomBytes(bit);
-//     for (let i = 0; i < AESkey.length; i++) {
-//         AESkey[i] = key.data[i]
-//     }
-//     return AESkey
-// }
-
-function getIV(key) {
-    let iv = eccryptoJS.randomBytes(16);
-    for (let i = 0; i < iv.length; i++) {
-        iv[i] = key[i]
-    }
-    return iv;
-}
-
-
-
 async function getParameter() {
     console.log(document.cookie)
 
-    //масив где храниться HTML код с указаними письмами для вывода 
+    //array where the HTML code with the specified scripts for output is stored
     let boxInner = new Array()
-    //Сохраняем силку на HTML блок
+    //Save the link to the HTML block
     let box = document.querySelector('#messagesList')
 
-    //дані сесії на кліенте
+    //session data on the client
     let session = JSON.parse(sessionStorage.getItem("session"))
     let login = sessionStorage.getItem("Login")
     console.log("Login",login)
-    //console.log(session)
     let sessionKey = adaptationAES(session.sessionKey,session.sessionKey.data.length)
     let sessionIV = adaptationAES(session.IV,session.IV.data.length)
-    //console.log(sessionKey,sessionIV)
     console.log("sessionKey",sessionKey)
     console.log("sessionIV",sessionIV)
 
     login = eccryptoJS.utf8ToBuffer(login);
+    //ECDSA signature for login
+    let hash = await eccryptoJS.sha256(login);
+    let sessionPrivateKey = eccryptoJS.generateKeyPair();
+
+    for (let i = 0; i < sessionPrivateKey.privateKey.length; i++) {
+        sessionPrivateKey.privateKey[i] = session.sessionPrivateKey.data[i]
+    }
+    console.log(session.sessionPrivateKey);
+    let sig = await eccryptoJS.sign(sessionPrivateKey.privateKey, hash);
+    console.log({
+        "hash":hash,
+        "sessionPrivateKey.privateKey":sessionPrivateKey.privateKey,
+        "sig": sig
+    });
+    
+    //Encrypt
     login = await eccryptoJS.aesCbcEncrypt(sessionIV, sessionKey, login);
     console.log("Encrypt login",login)
 
     let data = JSON.stringify({
         "login": login,
-        "id": session.id
+        "sig": sig
     })
 
     let getParameter = new XMLHttpRequest()
@@ -68,9 +52,8 @@ async function getParameter() {
                 return;
             }
 
-            //Дешифрування параметрів повідомлень
+            //Decryption of message parameters
             parameters = adaptationAES(parameters, parameters.data.length)
-            //console.log(messagePublicKeyServer)
             parameters = await eccryptoJS.aesCbcDecrypt(sessionIV, sessionKey, parameters);
             
             console.log("Array parametrs before decrypt",parameters)
@@ -107,7 +90,7 @@ async function getParameter() {
                 </div>
                 `
             }  
-            //Размещение в блок
+            //Placement in block
             box.innerHTML = boxInner.join('')
 
         })
@@ -145,7 +128,7 @@ async function deleteUser(button) {
     data = JSON.stringify(data);
     console.log(data)
 
-    //Шифрування сеансовими ключаси дані для узгодженн ключа повідомлення
+   //Encryption with session keys and data for the agreement of the message key
     data = eccryptoJS.utf8ToBuffer(data);
     data = await eccryptoJS.aesCbcEncrypt(sessionIV, sessionKey, data);
     console.log(data)
@@ -154,7 +137,7 @@ async function deleteUser(button) {
         'data': data
     })
 
-    //POST запрос лля відправки та запису повідомлення на сервері
+    //POST request to send and record a message on the server
     let deleteMessage = new XMLHttpRequest()
     deleteMessage.open('POST', "/deleteMessage", true)
     deleteMessage.setRequestHeader('Content-Type', 'application/json')
@@ -173,24 +156,21 @@ async function openMessage(mesangeDiv) {
     mesangeId = mesangeId[1];
     console.log("Id message",mesangeId)
 
-    //дані сесії на кліенте
+    //session data on the client
     let session = JSON.parse(sessionStorage.getItem("session"))
     let login = sessionStorage.getItem("Login")
-    //console.log("session.sessionKey",session.sessionKey)
     console.log("Login",login)
 
-    //генерація ключей повідомлення повідомлення
+    //generation of message message keys
     let messageKey = eccryptoJS.generateKeyPair();
     let messagePublicKey = messageKey.publicKey;
     console.log("messagePublicKey",messagePublicKey)
     console.log("messagePrivateKey",messageKey.privateKey)
-    // console.log(sessionKey)
 
     let sessionKey = adaptationAES(session.sessionKey,32);
     let sessionIV = adaptationAES(session.IV,16);
     console.log("sessionKey",sessionKey)
     console.log("sessionIV",sessionIV)
-    //let sessionId = session.id;
 
     let data = {
         'login': login,
@@ -203,18 +183,17 @@ async function openMessage(mesangeDiv) {
     data = JSON.stringify(data);
     console.log(data)
 
-    //Шифрування сеансовими ключаси дані для узгодженн ключа повідомлення
+    //Encryption with session keys and data for the agreement of the message key
     data = eccryptoJS.utf8ToBuffer(data);
     data = await eccryptoJS.aesCbcEncrypt(sessionIV, sessionKey, data);
     console.log(data)
     data = JSON.stringify({
-      //  'id': sessionId,
         'data': data
     })
 
     console.log("data after encrypt",data)
 
-    //POST запрос для відпраки даних заякими отримати повідомлення з сервера
+    //POST request to send data to receive a message from the server
     let getMessage = new XMLHttpRequest()
     getMessage.open('POST', "/getMessage", true)
     getMessage.setRequestHeader('Content-Type', 'application/json')
@@ -229,38 +208,33 @@ async function openMessage(mesangeDiv) {
 
         console.log("dataAnswer before decrypt",dataAnswer)
 
-        //Дешифрование відкритого ключа сервера
+        //Decryption of the server's public key
         let messagePublicKeyServer = dataAnswer.messagePublicKeyServer;
         messagePublicKeyServer = adaptationAES(messagePublicKeyServer, messagePublicKeyServer.data.length)
         messagePublicKeyServer = await eccryptoJS.aesCbcDecrypt(sessionIV, sessionKey, messagePublicKeyServer);
         console.log("messagePublicKeyServer",messagePublicKeyServer)
-        //console.log(messagePublicKeyServer)
 
-        //Узгодження ключа повідомлення
+        //Reconciliation of the message key
         let messageSharedKey = await eccryptoJS.derive(
             messageKey.privateKey,
             messagePublicKeyServer
         );
-        //IV ключа повідомлення
+        //IV of the message key
         let messageIV = getIV(messagePublicKeyServer);
 
         console.log("messageSharedKey",messageSharedKey)
         console.log("messageIV",messageIV)
 
-        //Дешифрування ключа повідомлення с бази даних, яким зашифровано повідомлення
+        //Decrypting the message key from the database that encrypted the message
         let keys = dataAnswer.keys;
         keys = adaptationAES(keys, keys.data.length)
         keys = await eccryptoJS.aesCbcDecrypt(messageIV, messageSharedKey, keys);
         keys = JSON.parse(JSON.parse(keys.toString()));
         console.log("Decrypt keys",keys)
 
-        //console.log(keys)
-
-        //Ініціалізування ключа повідомленн з бази даних, його IV, та ключ отримувача
+        //Initialize the message key from the database, its IV, and the recipient key
         let messageKeyM = JSON.parse(keys.messageKeyM)
         let messageIVM = JSON.parse(keys.messageIVM)
-        // console.log("decrypt messageKeyM",messageKeyM)
-        // console.log("decrypt messageIVM",messageIVM)
         let recipientPublicKey = adaptationAES(keys.recipientPublicKey, keys.recipientPublicKey.data.length)
 
         messageKeyM = adaptationAES(messageKeyM, messageKeyM.data.length)
@@ -271,19 +245,18 @@ async function openMessage(mesangeDiv) {
             "decrypt messageIVM": messageIVM
         })
 
-        //Дешифрування повідомлення, розшифрованим ключем повідомлення
+        //Decrypting the message with the decrypted message key
         let messageEncry = dataAnswer.message;
         messageEncry = adaptationAES(messageEncry, messageEncry.data.length)
         messageEncry = await eccryptoJS.aesCbcDecrypt(messageIVM, messageKeyM, messageEncry);
         messageEncry = JSON.parse(messageEncry.toString())
-        //console.log(messageEncry)
         console.log("decrypt messageEncry decrypt key message",messageEncry)
 
-        //Формалізація відкритого ключа відправника
+        //Formalization of the sender's public key
         let PublicKeySender = messageEncry.PublicKeySender;
         PublicKeySender = adaptationAES(PublicKeySender, PublicKeySender.data.length)
 
-        //Приведення веденного таємного ключа користовуча
+        //Bringing the maintenance of the user's secret key
         let sender = document.querySelector('#privateKey').value
         sender = sender.split(' ').join('');
         sender = sender.split('');
@@ -298,32 +271,28 @@ async function openMessage(mesangeDiv) {
         }
         console.log("Recipient PrivateKey",senderPrivateKey)
 
-        //console.log("PublicKeyRecipient",PublicKeySender)
-        //Узгодження ключа користувачів
+        //Reconcile users' key
         let UserSharedKey = await eccryptoJS.derive(
             senderPrivateKey,
             PublicKeySender
         );
         console.log("UserSharedKey",UserSharedKey)
 
-        //IV ключа користувачів
+        //IV user key
         let userIV = getIV(recipientPublicKey);
         console.log("userIV",userIV)
 
-        //Формалізація повідомлення
+        //Formalization of the message
         let message = messageEncry.message;
         message = adaptationAES(message, message.data.length)
 
         console.log(UserSharedKey)
 
-        //Дешифрування повідомлення
+        //Decrypting the message
         let openMessage = await eccryptoJS.aesCbcDecrypt(userIV, UserSharedKey, message);
         console.log("ddd")
         console.log("openMessage after decrypt key users",openMessage)
         openMessage = openMessage.toString()
-        //console.log("openMessage",openMessage)
-
-        //console.log(openMessage)
 
         let messageVerify = eccryptoJS.utf8ToBuffer(openMessage);
         let messageHash = await eccryptoJS.sha256(messageVerify);
@@ -344,11 +313,6 @@ async function openMessage(mesangeDiv) {
 
         let title = document.querySelector(`#${mesangeDiv.id} h6`)
         title = title.innerHTML;
-
-        // let title = "hello how are you"
-        //let newTitle = `${title}`.split(' ')
-        //newTitle = newTitle.join('').split('').join('').split(':').slice(0)
-        //console.log(newTitle)
 
         PublicKeySender = PublicKeySender.join(' ')
         secRead.innerHTML = `
@@ -373,27 +337,25 @@ function backButton(close,open){
 }
 
 async function writeMessage() {
-    //дані сесії на кліенте
+    //session data on the client
     let session = JSON.parse(sessionStorage.getItem("session"))
     let login = sessionStorage.getItem("Login")
     console.log(session)
     console.log("Login",login)
 
-    //генерація ключей повідомлення повідомлення
+    //generation of message message keys
     let messageKey = eccryptoJS.generateKeyPair();
     let messagePublicKey = messageKey.publicKey;
-    // console.log(sessionKey)
 
     console.log("messagePublicKey",messagePublicKey)
     console.log("messagePrivateKey",messageKey.privateKey)
 
     let sessionKey = adaptationAES(session.sessionKey,32);
     let IV = adaptationAES(session.IV,16);
-    //let id = session.id;
     console.log("sessionKey",sessionKey)
     console.log("sessionIV",IV)
 
-    //Логін отримувача
+    //Recipient's login
     let recipient = document.querySelector("#recipient").value;
     console.log("Login recipient",recipient)
 
@@ -405,21 +367,11 @@ async function writeMessage() {
 
     console.log("data before encrypt",data)
 
-    //console.log(data)
-
     data = JSON.stringify(data);
-    //console.log(data)
 
-    // login = eccryptoJS.utf8ToBuffer(login);
-    // login = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, login);
-    // messagePublicKey = eccryptoJS.utf8ToBuffer(messagePublicKey);
-    // messagePublicKey = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, messagePublicKey);
-    // console.log(login,password)
-
-    //Шифрування сеансовими ключаси дані для узгодженн ключа повідомлення
+    //Encryption with session keys and data for the agreement of the message key
     data = eccryptoJS.utf8ToBuffer(data);
     data = await eccryptoJS.aesCbcEncrypt(IV, sessionKey, data);
-    //console.log(data)
     console.log("data after encrypt",data)
     data = JSON.stringify(data)
 
@@ -428,49 +380,46 @@ async function writeMessage() {
     xhr.setRequestHeader('Content-Type', 'application/json')
     xhr.addEventListener("load", async function () {
         let answer = JSON.parse(xhr.response)
-        //console.log(answer)
         console.log("data from server",answer)
-        //Якщо такого логіна отримувача нема, запускається даний блок
+        //If there is no such recipient's login, this block is started
         if (answer == 1) {
             console.log("This login is not have into BD")
             return;
         }
 
-        //Дешифрування відкритого ключа повідомлення серверу
+        //Decrypting the public key of the server message
         let messagePublicKeyServer = answer.messagePublicKeyServer;
         messagePublicKeyServer = adaptationAES(messagePublicKeyServer, messagePublicKeyServer.data.length)
-        //console.log(messagePublicKeyServer)
-        messagePublicKeyServer = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, messagePublicKeyServer);
+        messagePublicKeyServer = await eccryptoJS.aesCbcDecrypt(IV, sessionKey, messagePublicKeyServer)
         console.log("messagePublicKeyServer",messagePublicKeyServer)
 
-        //Форматування зашифрованих відкритих ключів користувачів
+        //Formatting users' encrypted public keys
         let UserPublicKey = answer.UserPublicKey;
         UserPublicKey = adaptationAES(UserPublicKey, UserPublicKey.data.length)
 
-        //Узгодження ключа повідомлення
+        //Reconciliation of the message key
         let messageSharedKey = await eccryptoJS.derive(
             messageKey.privateKey,
             messagePublicKeyServer
         );
-        //IV ключа повідомлення
+        //IV of the message key
         let messageIV = getIV(messagePublicKeyServer);
 
         console.log("messageSharedKey",messageSharedKey)
         console.log("messageIV",messageIV)
 
 
-        //Дешифрування зашифрованих відкритих ключів користувачів узгодженим ключем повідомлення
+        //Decrypting users' encrypted public keys with the agreed message key
         UserPublicKey = await eccryptoJS.aesCbcDecrypt(messageIV, messageSharedKey, UserPublicKey);
-        //Перевод бітів у обьект
-        //console.log(UserPublicKey.toString());
+        //Translation of bits into an object
         UserPublicKey = JSON.parse(UserPublicKey.toString());
         console.log("UserPublicKey",UserPublicKey)
 
-        //Форматування відкритого ключа отримувача
+        //Format the receiver's public key
         let PublicKeyRecipient = adaptationAES(UserPublicKey.PublicKeyRecipient, UserPublicKey.PublicKeyRecipient.data.length)
         let PublicKeySender = UserPublicKey.PublicKeySender
 
-        //Перевід таємного ключа відправника у бітовий формат
+        //Translation of the sender's secret key into bit format
         let sender = document.querySelector('#privateKey').value;
         sender = sender.split(' ').join('');
         sender = sender.split('');
@@ -485,28 +434,25 @@ async function writeMessage() {
         }
         console.log("senderPrivateKey",senderPrivateKey)
 
-        //console.log(senderPrivateKey)
-
-
-        //Узгодження ключа користувачів
+        //Reconcile users' key
         let UserSharedKey = await eccryptoJS.derive(
             senderPrivateKey,
             PublicKeyRecipient
         );
         console.log("UserSharedKey",UserSharedKey)
 
-        //IV ключа користувачів
+        //IV user key
         let userIV = getIV(PublicKeyRecipient);
         console.log("userIV",userIV)
 
-        //Текст введений відправником
+        //Text entered by the sender
         let text = document.querySelector("#textarea");
         console.log("Text of message before encrypt",text)
 
-        //Перевід у JSON для подальшого шифрування
+        //Translation to JSON for further encryption
         let message = JSON.stringify(text.value)
 
-        //Шифрування ключем користувачів
+        //Encryption with users key
         message = eccryptoJS.utf8ToBuffer(message);
 
         console.log("good")
@@ -517,7 +463,7 @@ async function writeMessage() {
         console.log("message encrypt user key",message)
         
         
-        //Дані для шифрування ключем повідомлення
+        //Data for encryption with the message key
         message = JSON.stringify({
             "message": message,
             "PublicKeySender": PublicKeySender
@@ -525,25 +471,21 @@ async function writeMessage() {
 
         console.log("message and publick key sender befor encrypt message key",message)
         
-        //Шифрування ключем повідомлення
+        //Encrypt the message with the key
         message = eccryptoJS.utf8ToBuffer(message);
         message = await eccryptoJS.aesCbcEncrypt(messageIV, messageSharedKey, message);
-        //console.log("good")
 
         let usersSig = await eccryptoJS.sign(senderPrivateKey, usersHash);
 
-        //Перевід у JSON для відправки на сервер
+        //Translation to JSON for sending to the server
         message = JSON.stringify({
             "message": message,
-            //"id": id,
             "messageSig": usersSig
         })
 
         console.log("message and publick key encrypt message key and message sig",message)
 
-        //console.log(message);
-
-        //POST запрос лля відправки та запису повідомлення на сервері
+        //POST request to send and record a message on the server
         let sendMessage = new XMLHttpRequest()
         sendMessage.open('POST', "/writeMessage", true)
         sendMessage.setRequestHeader('Content-Type', 'application/json')
