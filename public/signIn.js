@@ -1,13 +1,5 @@
 (async function () {
-    //Перевірка наявності сеасових ключів
-    // if (sessionStorage.getItem("session")) {
-    //     console.log("have")
-    //     return;
-    // }
-    
-    console.log("nohave")
-
-    let sessionKey = eccryptoJS.generateKeyPair();
+       let sessionKey = eccryptoJS.generateKeyPair();
     console.log(sessionKey)
 
     let data = JSON.stringify(sessionKey.publicKey);
