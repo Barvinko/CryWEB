@@ -1,0 +1,69 @@
+*{
+    box-sizing: border-box;
+}
+/* SIGIN UP */
+.signIn{
+    width: 275px;
+    margin-top: 10vh;
+    border: 2px solid rgba(0, 0, 0, 0.387);
+    border-radius: 25px;
+}
+
+.signIn button{
+    width: 91px;
+}
+
+/* SIGIN UP */
+.signUp{
+    width: 275px;
+    margin-top: 10vh;
+    border: 2px solid rgba(0, 0, 0, 0.387);
+    border-radius: 25px;
+}
+
+.signUp button{
+    width: 91px;
+}
+
+/* MAIN PAGE */
+.navbar-expand-lg .navbar-nav {
+    flex-direction: row;
+}
+.mb-lg-0 {
+    margin-bottom: 0!important;
+}
+
+#navbarMain{
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+}
+
+#secList .secList{
+  border: 1px solid rgba(0, 0, 0, 0.152);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  color: rgba(0, 0, 0, 0.718);
+}
+
+#messagesList > div:first-child{
+  border-top: 1px solid rgba(0, 0, 0, 0.152);
+}
+
+#messagesList > div{
+  border-bottom: 1px solid rgba(0, 0, 0, 0.152);
+  
+  padding: 3px 10px;
+}
+
+#messagesList button{
+  margin-left: 0;
+  border: 0;
+  background: rgba(255, 255, 255, 0);
+  font-size: 24px;
+  margin-top: -5px;
+}
+
+#alert{
+  color: white;
+  width: 275px;
+}

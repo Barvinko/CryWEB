@@ -1,48 +1,4 @@
-<style>
-.navbar-expand-lg .navbar-nav {
-    flex-direction: row;
-}
-.mb-lg-0 {
-    margin-bottom: 0!important;
-}
-
-nav{
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-}
-
-#secList .secList{
-  border: 1px solid rgba(0, 0, 0, 0.152);
-  border-bottom: 0;
-  border-radius: 10px 10px 0 0;
-  color: rgba(0, 0, 0, 0.718);
-}
-
-#messagesList > div:first-child{
-  border-top: 1px solid rgba(0, 0, 0, 0.152);
-}
-
-#messagesList > div{
-  border-bottom: 1px solid rgba(0, 0, 0, 0.152);
-  
-  padding: 3px 10px;
-}
-
-#messagesList button{
-  margin-left: 0;
-  border: 0;
-  background: rgba(255, 255, 255, 0);
-  font-size: 24px;
-  margin-top: -5px;
-}
-
-#alert{
-  color: white;
-  width: 275px;
-}
-</style>
-
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav id="navbarMain" class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
     <a class="navbar-brand" href="/">CryWEB</a>
       <ul class="navbar-nav me-auto mb-2 mb-lg-0 d-flex">
@@ -56,43 +12,39 @@ nav{
 </nav>
 
 <div class="container">
-    {{!-- <header class="border-bootem">
-        <form action="/main/exit" method="get">
-            <button type="submit" class="btn btn-primary btn-lg h-100">EXIT</button>
-        </form>
-    </header> --}}
-    <input class="form-control mt-3" id="privateKey" placeholder="Private key" aria-label="Search">
-    <main class="p-3">
-      <section id='secList' class='secList' >
-        <div class="text-center mt-1">
-          <h3>Message List</h3>
-        </div>
-        <div id="messagesList">
+  <input class="form-control mt-3" id="privateKey" placeholder="Private key" aria-label="Search">
+  <main class="p-3">
+    <section id='secList' class='secList' >
+      <div class="text-center mt-1">
+        <h3>Message List</h3>
+      </div>
+      <div id="messagesList">
 
-        </div>
-      </section>
+      </div>
+    </section>
 
-      <section id='secWrite' class='d-none' >
-        <button onclick = "backButton(secWrite,secList)" class='btn-lg btn btn-dark mb-2'>
-                    <i class="fas fa-arrow-left"></i>
-                    Back To Message List
-        </button>
-        <div class="form-floating mb-3">
-            <input type="text" class="form-control" id="recipient" name="recipient" placeholder="Login">
-            <label for="recipient">Login of recipient</label>
-        </div>
-        <div class="form-floating">
-            <textarea class="form-control" name="textarea" placeholder="Leave a comment here" id="textarea" style="height: 30vh"></textarea>
-            <label for="textarea">Message</label>
-        </div>
-        <button class="btn btn-dark mt-3" onclick="writeMessage()">Send</button>
-      </section>
+    <section id='secWrite' class='d-none' >
+      <button onclick = "backButton(secWrite,secList)" class='btn-lg btn btn-dark mb-2'>
+                  <i class="fas fa-arrow-left"></i>
+                  Back To Message List
+      </button>
+      <div class="form-floating mb-3">
+          <input type="text" class="form-control" id="recipient" name="recipient" placeholder="Login">
+          <label for="recipient">Login of recipient</label>
+      </div>
+      <div class="form-floating">
+          <textarea class="form-control" name="textarea" placeholder="Leave a comment here" id="textarea" style="height: 30vh"></textarea>
+          <label for="textarea">Message</label>
+      </div>
+      <button class="btn btn-dark mt-3" onclick="writeMessage()">Send</button>
+    </section>
 
-      <section id='secRead' class='d-none' >
+    <section id='secRead' class='d-none' >
 
-      </section>
-    </main>
+    </section>
+  </main>
 
-    <script defer src="./main.js"></script>
+  <script defer src="./main.js"></script>
 
-    <div id="alert bg-dark" class="d-none"></div>
+  <div id="alert bg-dark" class="d-none"></div>
+</div>
