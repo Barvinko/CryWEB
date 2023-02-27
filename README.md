@@ -10,7 +10,7 @@ I used tech stack on this project:
 - MongoDB;
 - Mongoose.
 
-To run, you need to install node.js, then go to directory where the package.json file is located through terminal and run "npm install" command to install all application modules. To start, use command "node index.js", on port 3000 the server is launched, now can go to it by link: http://localhost:3000/
+To run, you need to install node.js, then go to directory where the package.json file is located through terminal and run "npm install" command to install all application modules. To start, use command "npm run start", on port 3000 the server is launched, now can go to it by link: http://localhost:3000/
   
 ## Link to diploma work
 https://drive.google.com/file/d/1vi4HbGKlJRF3IhDFLFvvxGWYouaILV4k/view?usp=share_link
