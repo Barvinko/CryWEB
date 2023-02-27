@@ -11,6 +11,8 @@ I used tech stack on this project:
 - Mongoose.
 
 To run, you need to install node.js, then go to directory where the package.json file is located through terminal and run "npm install" command to install all application modules. To start, use command "npm run start", on port 3000 the server is launched, now can go to it by link: http://localhost:3000/
+
+The scientific novelty of work in the improved end-to-end encryption algorithm for WEB messaging systems, namely in providing additional unique protection for each message, as well as optimizing these processes for the server, freeing it from the task of encrypting and decrypting large data, transferring these processes to the client.
   
 ## Link to diploma work
 https://drive.google.com/file/d/1vi4HbGKlJRF3IhDFLFvvxGWYouaILV4k/view?usp=share_link
